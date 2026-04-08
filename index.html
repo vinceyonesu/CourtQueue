@@ -12,10 +12,7 @@
     body { font-family: sans-serif; background: #f4f4f4; min-height: 100vh; }
     button { cursor: pointer; border: none; border-radius: 6px; padding: 6px 14px; font-size: 13px; color: white; }
     input, select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-    @keyframes slideIn {
-      from { transform: translateX(120%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
+    @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     .notif { animation: slideIn 0.3s ease; }
   </style>
 </head>
@@ -34,7 +31,7 @@
     }
 
     function formatTime(date) {
-      return new Date(date).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+      return new Date(date).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
     }
 
     function NotificationBanner({ notifications }) {
@@ -43,7 +40,7 @@
         <div style={{position:"fixed",top:"20px",right:"20px",zIndex:999,display:"flex",flexDirection:"column",gap:"8px"}}>
           {notifications.map(n => (
             <div key={n.id} className="notif" style={{
-              background:n.type==="success"?"#1D9E75":"#e67e22",
+              background:n.type==="success"?"#1D9E75":n.type==="error"?"#e74c3c":"#e67e22",
               color:"white",padding:"12px 18px",borderRadius:"8px",
               fontSize:"14px",fontWeight:"500",boxShadow:"0 4px 12px rgba(0,0,0,0.15)",
               maxWidth:"280px"
@@ -105,6 +102,66 @@
       );
     }
 
+    function AdminPanel({ queue, courts, onRemovePlayer, onResetCourt, onClearQueue }) {
+      const [open, setOpen] = useState(false);
+      return (
+        <div style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #e74c3c"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <h3>🔧 Admin Controls</h3>
+            <button style={{background:open?"#e74c3c":"#888"}} onClick={()=>setOpen(!open)}>
+              {open?"Hide":"Show"} Controls
+            </button>
+          </div>
+          {open && (
+            <div style={{marginTop:"16px"}}>
+              <div style={{marginBottom:"16px"}}>
+                <h4 style={{marginBottom:"8px",color:"#555"}}>Reset Courts</h4>
+                <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+                  {courts.map(c=>(
+                    <button key={c.id} style={{background:c.status==="occupied"?"#e74c3c":"#aaa"}}
+                      onClick={()=>onResetCourt(c.id)}>
+                      Reset {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{marginBottom:"16px"}}>
+                <h4 style={{marginBottom:"8px",color:"#555"}}>Remove Players</h4>
+                {queue.length===0?(
+                  <p style={{color:"#aaa",fontSize:"13px"}}>No players in queue</p>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+                    {queue.map(p=>(
+                      <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                        padding:"8px 12px",background:"#fafafa",borderRadius:"6px",border:"1px solid #eee"}}>
+                        <span style={{fontSize:"13px"}}>
+                          <strong>{p.name}</strong>
+                          <span style={{color:"#888",marginLeft:"8px"}}>{p.court}</span>
+                          <span style={{marginLeft:"8px",fontSize:"12px",padding:"2px 6px",borderRadius:"20px",
+                            background:p.status==="playing"?"#1D9E75":"#eee",
+                            color:p.status==="playing"?"white":"#555"}}>
+                            {p.status}
+                          </span>
+                        </span>
+                        <button style={{background:"#e74c3c",fontSize:"12px",padding:"4px 10px"}}
+                          onClick={()=>onRemovePlayer(p.id)}>
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button style={{background:"#e74c3c",width:"100%",padding:"10px"}}
+                onClick={onClearQueue}>
+                🗑 Clear Entire Queue
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     function HistoryLog({ history }) {
       if (history.length === 0) return null;
       return (
@@ -123,7 +180,7 @@
             <tbody>
               {[...history].reverse().map((h,i) => (
                 <tr key={h.id} style={{borderBottom:"1px solid #f0f0f0"}}>
-                  <td style={{padding:"8px",color:"#aaa"}}>{history.length - i}</td>
+                  <td style={{padding:"8px",color:"#aaa"}}>{history.length-i}</td>
                   <td style={{padding:"8px",fontWeight:"500"}}>{h.playerName}</td>
                   <td style={{padding:"8px",color:"#888"}}>{h.court}</td>
                   <td style={{padding:"8px"}}>
@@ -160,12 +217,12 @@
       const addNotification = (message, type="success") => {
         const id = Date.now();
         setNotifications(n=>[...n,{id,message,type}]);
-        setTimeout(()=>setNotifications(n=>n.filter(x=>x.id!==id)), 4000);
+        setTimeout(()=>setNotifications(n=>n.filter(x=>x.id!==id)),4000);
       };
 
       const join = () => {
         if (!name.trim()) { setError("Please enter your name"); return; }
-        const position = queue.length + 1;
+        const position = queue.length+1;
         setQueue(q=>[...q,{id:Date.now(),name:name.trim(),court,position,status:"waiting"}]);
         addNotification(`✅ ${name.trim()} joined ${court} at position ${position}`);
         setName(""); setError("");
@@ -195,19 +252,29 @@
         if (player) {
           setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
           addNotification(`✅ ${player.name} finished — session was ${duration} min`);
-          setHistory(h=>[...h,{
-            id:Date.now(),
-            playerName:player.name,
-            court:player.court,
-            duration,
-            endedAt:new Date()
-          }]);
+          setHistory(h=>[...h,{id:Date.now(),playerName:player.name,court:player.court,duration,endedAt:new Date()}]);
         }
         setSessions(s=>[...s,duration]);
         const newQueue = queue.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1}));
         setQueue(newQueue);
         if (newQueue.length>0&&newQueue[0].status==="waiting")
           setTimeout(()=>addNotification(`🎾 ${newQueue[0].name} — you are next!`,"warning"),500);
+      };
+
+      const handleResetCourt = (courtId) => {
+        const court = courts.find(c=>c.id===courtId);
+        if (court?.currentPlayer) {
+          const player = queue.find(p=>p.name===court.currentPlayer);
+          if (player) leave(player.id);
+        }
+        setCourts(cs=>cs.map(c=>c.id===courtId?{...c,status:"available",currentPlayer:null}:c));
+        addNotification(`🔧 ${court?.name} has been reset`,"warning");
+      };
+
+      const handleClearQueue = () => {
+        setQueue([]);
+        setCourts(cs=>cs.map(c=>({...c,status:"available",currentPlayer:null})));
+        addNotification(`🗑 Queue cleared by admin`,"error");
       };
 
       return (
@@ -220,6 +287,13 @@
           </div>
           <div style={{maxWidth:"700px",margin:"30px auto",padding:"0 20px"}}>
             <CourtStatusPanel courts={courts} />
+            <AdminPanel
+              queue={queue}
+              courts={courts}
+              onRemovePlayer={leave}
+              onResetCourt={handleResetCourt}
+              onClearQueue={handleClearQueue}
+            />
             <div style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #ddd"}}>
               <h3 style={{marginBottom:"14px"}}>Join the Queue</h3>
               {error&&<p style={{color:"red",fontSize:"13px",marginBottom:"8px"}}>{error}</p>}
