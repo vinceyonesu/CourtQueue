@@ -14,7 +14,6 @@
     input, select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 100%; }
     @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .notif { animation: slideIn 0.3s ease; }
@@ -82,6 +81,18 @@
       return new Date(date).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
     }
 
+    // NEW: Calculate estimated availability time for a court
+    function getCourtAvailability(courtName, queue, sessionStartTimes, avg) {
+      const playingPlayer = queue.find(p=>p.court===courtName&&p.status==="playing");
+      if (!playingPlayer) return null;
+      const startTime = sessionStartTimes[playingPlayer.id];
+      if (!startTime) return null;
+      const elapsedMins = Math.floor((Date.now()-startTime)/60000);
+      const remainingMins = Math.max(0, avg - elapsedMins);
+      const availableAt = new Date(Date.now() + remainingMins * 60000);
+      return { remainingMins, availableAt: formatTime(availableAt), playerName: playingPlayer.name };
+    }
+
     function NotificationBanner({ notifications }) {
       if (notifications.length===0) return null;
       return (
@@ -138,6 +149,35 @@
       );
     }
 
+    // UPDATED: Court card now shows estimated availability time
+    function CourtCard({ court, queue, sessionStartTimes, avg }) {
+      const [tick, setTick] = useState(0);
+      useEffect(()=>{
+        const t = setInterval(()=>setTick(x=>x+1), 30000);
+        return ()=>clearInterval(t);
+      },[]);
+      const avail = getCourtAvailability(court.name, queue, sessionStartTimes, avg);
+      return (
+        <div className="card" style={{padding:"14px",borderRadius:"8px",textAlign:"center",background:court.status==="occupied"?"#fff0f0":"#f0fdf8",border:`1px solid ${court.status==="occupied"?"#e74c3c":"#1D9E75"}`,transition:"all 0.3s ease"}}>
+          <div style={{fontSize:"22px",marginBottom:"6px"}}>{court.status==="occupied"?"🔴":"🟢"}</div>
+          <div style={{fontWeight:"bold",fontSize:"15px"}}>{court.name}</div>
+          <div style={{fontSize:"12px",marginTop:"4px",fontWeight:"500",color:court.status==="occupied"?"#e74c3c":"#1D9E75"}}>
+            {court.status==="occupied"?"Occupied":"Available"}
+          </div>
+          {court.currentPlayer&&<div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{court.currentPlayer}</div>}
+          {avail&&(
+            <div style={{marginTop:"6px",padding:"4px 8px",background:"#fff3cd",borderRadius:"6px",fontSize:"11px",color:"#856404"}}>
+              🕐 Free ~{avail.availableAt}
+              {avail.remainingMins>0&&<span style={{display:"block",color:"#aaa",fontSize:"10px"}}>{avail.remainingMins} min left</span>}
+            </div>
+          )}
+          <div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>
+            {queue.filter(p=>p.court===court.name&&p.status==="waiting").length} waiting
+          </div>
+        </div>
+      );
+    }
+
     function AdminPanel({ queue, courts, onRemovePlayer, onResetCourt, onClearQueue }) {
       const [open, setOpen] = useState(false);
       return (
@@ -174,60 +214,30 @@
       );
     }
 
-    // NEW: Animated position badge
-    function PositionBadge({ position, isPlaying, prevPosition }) {
+    function PositionBadge({ position, isPlaying }) {
       const [animate, setAnimate] = useState(false);
       const prevPos = useRef(position);
-
       useEffect(()=>{
-        if (prevPos.current !== position) {
-          setAnimate(true);
-          setTimeout(()=>setAnimate(false), 400);
-          prevPos.current = position;
-        }
+        if (prevPos.current!==position) { setAnimate(true); setTimeout(()=>setAnimate(false),400); prevPos.current=position; }
       },[position]);
-
       return (
-        <div className={animate?"badge-pop":""} style={{
-          width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,
-          background:isPlaying?"#1D9E75":"#ddd",
-          color:isPlaying?"white":"#555",
-          display:"flex",alignItems:"center",justifyContent:"center",
-          fontWeight:"bold",fontSize:"16px",
-          transition:"background 0.3s ease",
-        }}>{position}</div>
+        <div className={animate?"badge-pop":""} style={{width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,background:isPlaying?"#1D9E75":"#ddd",color:isPlaying?"white":"#555",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",fontSize:"16px",transition:"background 0.3s ease"}}>{position}</div>
       );
     }
 
     function PlayerRow({ player, idx, avg, onStart, onLeave, onEnd, onOvertime, isNew }) {
       return (
         <div className={`player-row${player.status==="playing"?" playing":""} ${isNew?"player-enter":""}`}
-          style={{display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px",marginBottom:"10px",borderRadius:"8px",
-            background:player.status==="playing"?"#f0fdf8":"#fafafa",
-            border:`1px solid ${player.status==="playing"?"#1D9E75":"#eee"}`,
-            transition:"background 0.3s ease, border-color 0.3s ease"
-          }}>
+          style={{display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px",marginBottom:"10px",borderRadius:"8px",background:player.status==="playing"?"#f0fdf8":"#fafafa",border:`1px solid ${player.status==="playing"?"#1D9E75":"#eee"}`,transition:"background 0.3s ease, border-color 0.3s ease"}}>
           <PositionBadge position={idx+1} isPlaying={player.status==="playing"} />
           <div style={{flex:1,minWidth:0}}>
             <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
               <strong style={{wordBreak:"break-word"}}>{player.name}</strong>
               <span className="muted" style={{fontSize:"13px",color:"#888"}}>{player.court}</span>
-              <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",
-                background:player.status==="playing"?"#1D9E75":"#eee",
-                color:player.status==="playing"?"white":"#555",
-                transition:"background 0.3s ease",whiteSpace:"nowrap"
-              }}>{player.status==="playing"?"Playing":"Waiting"}</span>
-              {idx===0&&player.status==="waiting"&&(
-                <span className="badge-pop" style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:"#fff3cd",color:"#856404",fontWeight:"500",whiteSpace:"nowrap"}}>
-                  🎾 Next!
-                </span>
-              )}
+              <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:player.status==="playing"?"#1D9E75":"#eee",color:player.status==="playing"?"white":"#555",transition:"background 0.3s ease",whiteSpace:"nowrap"}}>{player.status==="playing"?"Playing":"Waiting"}</span>
+              {idx===0&&player.status==="waiting"&&<span className="badge-pop" style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:"#fff3cd",color:"#856404",fontWeight:"500",whiteSpace:"nowrap"}}>🎾 Next!</span>}
             </div>
-            {player.status==="waiting"&&(
-              <div className="muted" style={{fontSize:"13px",color:"#888",marginTop:"4px",transition:"all 0.3s ease"}}>
-                ⏳ {formatWait(idx*avg)}
-              </div>
-            )}
+            {player.status==="waiting"&&<div className="muted" style={{fontSize:"13px",color:"#888",marginTop:"4px",transition:"all 0.3s ease"}}>⏳ {formatWait(idx*avg)}</div>}
             {player.status==="playing"&&<Timer onEnd={(d)=>onEnd(player.id,d)} onOvertime={()=>onOvertime(player)} />}
           </div>
           <div className="player-actions">
@@ -277,6 +287,7 @@
       const [soundOn, setSoundOn] = useState(true);
       const [darkMode, setDarkMode] = useState(false);
       const [newPlayerIds, setNewPlayerIds] = useState(new Set());
+      const [sessionStartTimes, setSessionStartTimes] = useState({});
       const [courts, setCourts] = useState([
         {id:1,name:"Court 1",status:"available",currentPlayer:null},
         {id:2,name:"Court 2",status:"available",currentPlayer:null},
@@ -307,7 +318,10 @@
 
       const leave=(id)=>{
         const player=queue.find(p=>p.id===id);
-        if (player?.status==="playing") setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
+        if (player?.status==="playing") {
+          setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
+          setSessionStartTimes(t=>{ const n={...t}; delete n[id]; return n; });
+        }
         const newQueue=queue.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1}));
         setQueue(newQueue);
         if (newQueue.length>0&&newQueue[0].status==="waiting") { addNotification(`🎾 ${newQueue[0].name} — you are next!`,"warning"); if(soundOn) playAlertSound(); }
@@ -315,13 +329,24 @@
 
       const setStatus=(id,status)=>{
         const player=queue.find(p=>p.id===id);
-        if (status==="playing"&&player) { setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"occupied",currentPlayer:player.name}:c)); addNotification(`🎾 ${player.name} started playing!`); if(soundOn) playSuccessSound(); }
+        if (status==="playing"&&player) {
+          setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"occupied",currentPlayer:player.name}:c));
+          setSessionStartTimes(t=>({...t,[id]:Date.now()}));
+          addNotification(`🎾 ${player.name} started playing!`);
+          if(soundOn) playSuccessSound();
+        }
         setQueue(q=>q.map(p=>p.id===id?{...p,status}:p));
       };
 
       const endSession=(id,duration)=>{
         const player=queue.find(p=>p.id===id);
-        if (player) { setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c)); addNotification(`✅ ${player.name} finished — ${duration} min`); setHistory(h=>[...h,{id:Date.now(),playerName:player.name,court:player.court,duration,endedAt:new Date()}]); if(soundOn) playSuccessSound(); }
+        if (player) {
+          setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
+          setSessionStartTimes(t=>{ const n={...t}; delete n[id]; return n; });
+          addNotification(`✅ ${player.name} finished — ${duration} min`);
+          setHistory(h=>[...h,{id:Date.now(),playerName:player.name,court:player.court,duration,endedAt:new Date()}]);
+          if(soundOn) playSuccessSound();
+        }
         setSessions(s=>[...s,duration]);
         const newQueue=queue.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1}));
         setQueue(newQueue);
@@ -336,7 +361,8 @@
       };
 
       const handleClearQueue=()=>{
-        setQueue([]); setCourts(cs=>cs.map(c=>({...c,status:"available",currentPlayer:null})));
+        setQueue([]); setSessionStartTimes({});
+        setCourts(cs=>cs.map(c=>({...c,status:"available",currentPlayer:null})));
         addNotification(`🗑 Queue cleared`,"error"); if(soundOn) playErrorSound();
       };
 
@@ -359,13 +385,7 @@
             <StatsBar queue={queue} history={history} />
             <div className="courts-grid">
               {courts.map(c=>(
-                <div key={c.id} className="card" style={{padding:"14px",borderRadius:"8px",textAlign:"center",background:c.status==="occupied"?"#fff0f0":"#f0fdf8",border:`1px solid ${c.status==="occupied"?"#e74c3c":"#1D9E75"}`,transition:"all 0.3s ease"}}>
-                  <div style={{fontSize:"22px",marginBottom:"6px"}}>{c.status==="occupied"?"🔴":"🟢"}</div>
-                  <div style={{fontWeight:"bold",fontSize:"15px"}}>{c.name}</div>
-                  <div style={{fontSize:"12px",marginTop:"4px",fontWeight:"500",color:c.status==="occupied"?"#e74c3c":"#1D9E75"}}>{c.status==="occupied"?"Occupied":"Available"}</div>
-                  {c.currentPlayer&&<div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{c.currentPlayer}</div>}
-                  <div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{queue.filter(p=>p.court===c.name&&p.status==="waiting").length} waiting</div>
-                </div>
+                <CourtCard key={c.id} court={c} queue={queue} sessionStartTimes={sessionStartTimes} avg={avg} />
               ))}
             </div>
             <AdminPanel queue={queue} courts={courts} onRemovePlayer={leave} onResetCourt={handleResetCourt} onClearQueue={handleClearQueue} />
