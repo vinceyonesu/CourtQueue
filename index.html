@@ -12,6 +12,15 @@
     body { font-family: sans-serif; background: #f4f4f4; min-height: 100vh; }
     button { cursor: pointer; border: none; border-radius: 6px; padding: 6px 14px; font-size: 13px; color: white; }
     input, select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+    @keyframes slideIn {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(120%); opacity: 0; }
+    }
+    .notif { animation: slideIn 0.3s ease; }
   </style>
 </head>
 <body>
@@ -26,6 +35,24 @@
       const h = Math.floor(mins / 60);
       const m = mins % 60;
       return m === 0 ? `~${h} hr wait` : `~${h} hr ${m} min wait`;
+    }
+
+    function NotificationBanner({ notifications }) {
+      if (notifications.length === 0) return null;
+      return (
+        <div style={{position:"fixed",top:"20px",right:"20px",zIndex:999,display:"flex",flexDirection:"column",gap:"8px"}}>
+          {notifications.map(n => (
+            <div key={n.id} className="notif" style={{
+              background: n.type==="success" ? "#1D9E75" : "#e67e22",
+              color:"white",padding:"12px 18px",borderRadius:"8px",
+              fontSize:"14px",fontWeight:"500",boxShadow:"0 4px 12px rgba(0,0,0,0.15)",
+              maxWidth:"280px"
+            }}>
+              {n.message}
+            </div>
+          ))}
+        </div>
+      );
     }
 
     function Timer({ onEnd }) {
@@ -86,6 +113,7 @@
       const [name, setName] = useState("");
       const [court, setCourt] = useState("Court 1");
       const [error, setError] = useState("");
+      const [notifications, setNotifications] = useState([]);
       const [courts, setCourts] = useState([
         {id:1,name:"Court 1",status:"available",currentPlayer:null},
         {id:2,name:"Court 2",status:"available",currentPlayer:null},
@@ -95,9 +123,17 @@
       const avg = sessions.length===0 ? DEFAULT_AVG
         : Math.round(sessions.slice(-5).reduce((s,x)=>s+x,0)/Math.min(sessions.length,5));
 
+      const addNotification = (message, type="success") => {
+        const id = Date.now();
+        setNotifications(n=>[...n,{id,message,type}]);
+        setTimeout(()=>setNotifications(n=>n.filter(x=>x.id!==id)), 4000);
+      };
+
       const join = () => {
         if (!name.trim()) { setError("Please enter your name"); return; }
-        setQueue(q=>[...q,{id:Date.now(),name:name.trim(),court,position:queue.length+1,status:"waiting"}]);
+        const position = queue.length + 1;
+        setQueue(q=>[...q,{id:Date.now(),name:name.trim(),court,position,status:"waiting"}]);
+        addNotification(`✅ ${name.trim()} joined ${court} at position ${position}`);
         setName(""); setError("");
       };
 
@@ -105,25 +141,40 @@
         const player = queue.find(p=>p.id===id);
         if (player?.status==="playing")
           setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
-        setQueue(q=>q.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1})));
+        const newQueue = queue.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1}));
+        setQueue(newQueue);
+        // Notify new first player they are next
+        if (newQueue.length > 0 && newQueue[0].status === "waiting") {
+          addNotification(`🎾 ${newQueue[0].name} — you are next!`, "warning");
+        }
       };
 
       const setStatus = (id, status) => {
         const player = queue.find(p=>p.id===id);
-        if (status==="playing"&&player)
+        if (status==="playing"&&player) {
           setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"occupied",currentPlayer:player.name}:c));
+          addNotification(`🎾 ${player.name} started playing on ${player.court}!`);
+        }
         setQueue(q=>q.map(p=>p.id===id?{...p,status}:p));
       };
 
       const endSession = (id, duration) => {
         const player = queue.find(p=>p.id===id);
-        if (player) setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
+        if (player) {
+          setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
+          addNotification(`✅ ${player.name} finished — session was ${duration} min`);
+        }
         setSessions(s=>[...s,duration]);
-        setQueue(q=>q.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1})));
+        const newQueue = queue.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1}));
+        setQueue(newQueue);
+        if (newQueue.length > 0 && newQueue[0].status === "waiting") {
+          setTimeout(()=>addNotification(`🎾 ${newQueue[0].name} — you are next!`, "warning"), 500);
+        }
       };
 
       return (
         <div>
+          <NotificationBanner notifications={notifications} />
           <div style={{background:"#1D9E75",padding:"14px 30px",display:"flex",alignItems:"center",gap:"10px"}}>
             <span style={{fontSize:"22px"}}>🎾</span>
             <span style={{color:"white",fontSize:"20px",fontWeight:"bold"}}>CourtQueue</span>
@@ -170,6 +221,11 @@
                         background:player.status==="playing"?"#1D9E75":"#eee",
                         color:player.status==="playing"?"white":"#555"
                       }}>{player.status==="playing"?"Playing":"Waiting"}</span>
+                      {player.position===1&&player.status==="waiting"&&(
+                        <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:"#fff3cd",color:"#856404",fontWeight:"500"}}>
+                          🎾 You're next!
+                        </span>
+                      )}
                     </div>
                     {player.status==="waiting"&&<div style={{fontSize:"13px",color:"#888",marginTop:"4px"}}>⏳ {formatWait((player.position-1)*avg)}</div>}
                     {player.status==="playing"&&<Timer onEnd={(d)=>endSession(player.id,d)} />}
