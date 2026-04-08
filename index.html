@@ -9,40 +9,45 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.9/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; min-height: 100vh; }
-    button { cursor: pointer; border: none; border-radius: 6px; padding: 6px 14px; font-size: 13px; color: white; }
-    input, select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+    button { cursor: pointer; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; color: white; font-weight: 500; transition: opacity 0.15s ease, transform 0.1s ease; }
+    button:hover { opacity: 0.9; }
+    button:active { transform: scale(0.97); }
+    input, select { padding: 10px 14px; border: 1.5px solid #e0e0e0; border-radius: 8px; font-size: 14px; width: 100%; transition: border-color 0.2s ease; outline: none; }
+    input:focus, select:focus { border-color: #1D9E75; }
     @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes growBar { from { height: 0; } to { height: 100%; } }
-    .notif { animation: slideIn 0.3s ease; }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .notif { animation: slideIn 0.3s cubic-bezier(0.34,1.56,0.64,1); }
     .warning-pulse { animation: pulse 1s infinite; }
-    .player-enter { animation: slideUp 0.35s ease; }
-    .badge-pop { animation: popIn 0.4s ease; }
+    .player-enter { animation: slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+    .badge-pop { animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1); }
     .modal-overlay { animation: fadeIn 0.2s ease; }
-    body.dark { background: #1a1a2e; color: #e0e0e0; }
-    body.dark input, body.dark select { background: #2a2a3e; color: #e0e0e0; border-color: #444; }
-    body.dark .card { background: #2a2a3e !important; border-color: #444 !important; }
-    body.dark .player-row { background: #2a2a3e !important; border-color: #444 !important; }
-    body.dark .player-row.playing { background: #1a3a2e !important; }
-    body.dark .tab-btn { background: #2a2a3e !important; color: #ccc !important; }
-    body.dark .tab-btn.active { background: #1D9E75 !important; color: white !important; }
-    body.dark .stat-card { background: #2a2a3e !important; border-color: #444 !important; }
-    body.dark .history-row { border-color: #333 !important; }
-    body.dark .queue-empty { color: #666 !important; }
-    body.dark .muted { color: #888 !important; }
-    body.dark .modal-box { background: #2a2a3e !important; border-color: #444 !important; }
-    body.dark .chart-bar-bg { background: #333 !important; }
-    body { background: #f4f4f4; }
-    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
-    .courts-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+    body.dark { background: #0f0f1a; color: #e0e0e0; }
+    body.dark input, body.dark select { background: #1e1e2e; color: #e0e0e0; border-color: #333; }
+    body.dark input:focus, body.dark select:focus { border-color: #1D9E75; }
+    body.dark .card { background: #1e1e2e !important; border-color: #2a2a3e !important; }
+    body.dark .player-row { background: #1e1e2e !important; border-color: #2a2a3e !important; }
+    body.dark .player-row.playing { background: #0d2a1e !important; border-color: #1D9E75 !important; }
+    body.dark .tab-btn { background: #1e1e2e !important; color: #aaa !important; border: 1px solid #2a2a3e; }
+    body.dark .tab-btn.active { background: #1D9E75 !important; color: white !important; border-color: #1D9E75 !important; }
+    body.dark .stat-card { background: #1e1e2e !important; border-color: #2a2a3e !important; }
+    body.dark .history-row { border-color: #2a2a3e !important; }
+    body.dark .queue-empty { color: #555 !important; }
+    body.dark .muted { color: #666 !important; }
+    body.dark .modal-box { background: #1e1e2e !important; border-color: #2a2a3e !important; }
+    body.dark .divider { border-color: #2a2a3e !important; }
+    body { background: #f0f2f5; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+    .courts-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
     .join-form-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .join-form-row input { flex: 1; min-width: 140px; }
-    .tabs-row { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px; flex-wrap: wrap; }
+    .tabs-row { display: flex; gap: 6px; margin-bottom: 16px; padding-bottom: 14px; flex-wrap: wrap; border-bottom: 1.5px solid #f0f0f0; }
     .player-actions { display: flex; flex-direction: column; gap: 6px; }
+    .card { background: white; border-radius: 14px; border: 1px solid #ebebeb; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
     @media (max-width: 600px) {
       .stats-grid { grid-template-columns: repeat(2,1fr); }
       .courts-grid { grid-template-columns: repeat(1,1fr); }
@@ -95,81 +100,17 @@
       return { remainingMins:remaining, availableAt:formatTime(new Date(Date.now()+remaining*60000)) };
     }
 
-    // NEW: Session History Chart
-    function SessionChart({ history }) {
-      if (history.length === 0) return null;
-      const last10 = history.slice(-10);
-      const maxDur = Math.max(...last10.map(h=>h.duration), 1);
-      const courtColors = {"Court 1":"#1D9E75","Court 2":"#185FA5","Court 3":"#534AB7"};
-      return (
-        <div className="card" style={{background:"white",borderRadius:"10px",padding:"20px",marginTop:"24px",border:"1px solid #ddd"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}>
-            <h3>📊 Session Duration Chart</h3>
-            <div style={{display:"flex",gap:"12px",flexWrap:"wrap"}}>
-              {Object.entries(courtColors).map(([court,color])=>(
-                <span key={court} style={{display:"flex",alignItems:"center",gap:"4px",fontSize:"12px",color:"#888"}}>
-                  <span style={{width:"10px",height:"10px",borderRadius:"2px",background:color,display:"inline-block"}}></span>
-                  {court}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div style={{display:"flex",alignItems:"flex-end",gap:"8px",height:"160px",padding:"0 4px"}}>
-            {last10.map((h,i)=>{
-              const heightPct = (h.duration/maxDur)*100;
-              const color = courtColors[h.court]||"#1D9E75";
-              const isOvertime = h.duration >= MAX_PLAY_MINUTES;
-              return (
-                <div key={h.id} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",height:"100%",justifyContent:"flex-end"}}>
-                  <span style={{fontSize:"10px",color:"#888",fontWeight:"500"}}>{h.duration}m</span>
-                  <div style={{width:"100%",position:"relative",height:`${heightPct}%`,minHeight:"4px"}}>
-                    <div style={{
-                      width:"100%",height:"100%",borderRadius:"4px 4px 0 0",
-                      background:isOvertime?"#e74c3c":color,
-                      transition:"height 0.5s ease",
-                      cursor:"pointer",
-                      position:"relative",
-                    }} title={`${h.playerName} — ${h.court} — ${h.duration} min`}>
-                      {isOvertime&&<div style={{position:"absolute",top:"-16px",left:"50%",transform:"translateX(-50%)",fontSize:"10px"}}>⚠️</div>}
-                    </div>
-                  </div>
-                  <span style={{fontSize:"9px",color:"#aaa",textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",width:"100%",maxWidth:"40px"}}>{h.playerName.split(" ")[0]}</span>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{borderTop:"1px solid #eee",marginTop:"8px",paddingTop:"8px",display:"flex",justifyContent:"space-between",fontSize:"11px",color:"#aaa"}}>
-            <span>Last {last10.length} sessions</span>
-            <span>Max: {maxDur} min · Avg: {Math.round(last10.reduce((s,h)=>s+h.duration,0)/last10.length)} min</span>
-          </div>
-        </div>
-      );
-    }
-
-    function CheckInModal({ player, onConfirm, onCancel }) {
-      if (!player) return null;
-      return (
-        <div className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-          <div className="modal-box card" style={{background:"white",borderRadius:"16px",padding:"30px",maxWidth:"360px",width:"100%",textAlign:"center",border:"1px solid #ddd"}}>
-            <div style={{fontSize:"48px",marginBottom:"16px"}}>🎾</div>
-            <h2 style={{marginBottom:"8px",fontSize:"20px"}}>Ready to Play?</h2>
-            <p style={{color:"#888",fontSize:"14px",marginBottom:"8px"}}><strong style={{color:"#333"}}>{player.name}</strong> — {player.court}</p>
-            <p style={{color:"#888",fontSize:"13px",marginBottom:"24px",lineHeight:"1.5"}}>Please confirm you are at the court and ready to start your session.</p>
-            <div style={{display:"flex",gap:"12px",justifyContent:"center"}}>
-              <button style={{background:"#eee",color:"#555",padding:"10px 24px",fontSize:"14px"}} onClick={onCancel}>Not Yet</button>
-              <button style={{background:"#1D9E75",padding:"10px 24px",fontSize:"14px",fontWeight:"500"}} onClick={onConfirm}>✅ I'm Ready!</button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     function NotificationBanner({ notifications }) {
       if (notifications.length===0) return null;
       return (
         <div style={{position:"fixed",top:"20px",right:"20px",zIndex:999,display:"flex",flexDirection:"column",gap:"8px",maxWidth:"calc(100vw - 40px)"}}>
           {notifications.map(n=>(
-            <div key={n.id} className="notif" style={{background:n.type==="success"?"#1D9E75":n.type==="error"?"#e74c3c":"#e67e22",color:"white",padding:"12px 18px",borderRadius:"8px",fontSize:"14px",fontWeight:"500",boxShadow:"0 4px 12px rgba(0,0,0,0.15)",maxWidth:"280px"}}>{n.message}</div>
+            <div key={n.id} className="notif" style={{
+              background:n.type==="success"?"#1D9E75":n.type==="error"?"#e74c3c":"#e67e22",
+              color:"white",padding:"12px 18px",borderRadius:"12px",fontSize:"14px",fontWeight:"500",
+              boxShadow:"0 8px 24px rgba(0,0,0,0.15)",maxWidth:"300px",
+              display:"flex",alignItems:"center",gap:"8px"
+            }}>{n.message}</div>
           ))}
         </div>
       );
@@ -185,14 +126,14 @@
       const mins=Math.floor(secs/60);
       const isWarning=mins>=MAX_PLAY_MINUTES-5, isOvertime=mins>=MAX_PLAY_MINUTES;
       return (
-        <div style={{marginTop:"8px"}}>
-          {isOvertime&&<div className="warning-pulse" style={{background:"#e74c3c",color:"white",padding:"6px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:"500",marginBottom:"8px",display:"inline-block"}}>⚠️ Time is up!</div>}
-          {isWarning&&!isOvertime&&<div style={{background:"#fff3cd",color:"#856404",padding:"6px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:"500",marginBottom:"8px",display:"inline-block"}}>⏰ 5 min remaining!</div>}
+        <div style={{marginTop:"10px"}}>
+          {isOvertime&&<div className="warning-pulse" style={{background:"#fff0f0",color:"#e74c3c",padding:"6px 12px",borderRadius:"8px",fontSize:"12px",fontWeight:"600",marginBottom:"8px",display:"inline-block",border:"1px solid #fcc"}}>⚠️ Time is up! Please wrap up.</div>}
+          {isWarning&&!isOvertime&&<div style={{background:"#fff8e1",color:"#e67e22",padding:"6px 12px",borderRadius:"8px",fontSize:"12px",fontWeight:"600",marginBottom:"8px",display:"inline-block",border:"1px solid #ffe082"}}>⏰ 5 min remaining!</div>}
           <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
-            <span style={{fontSize:"22px",fontWeight:"bold",color:isOvertime?"#e74c3c":isWarning?"#e67e22":running?"#1D9E75":"#333"}}>{fmt(secs)}</span>
-            {!running?<button style={{background:"#1D9E75"}} onClick={()=>{setRunning(true);playBeep(660,0.1);}}>Start</button>
-              :<button style={{background:"#e67e22"}} onClick={()=>setRunning(false)}>Pause</button>}
-            <button style={{background:"#e74c3c"}} onClick={()=>{setRunning(false);onEnd(Math.max(1,Math.round(secs/60)));setSecs(0);setOvertime(false);}}>End Session</button>
+            <span style={{fontSize:"24px",fontWeight:"700",fontVariantNumeric:"tabular-nums",color:isOvertime?"#e74c3c":isWarning?"#e67e22":running?"#1D9E75":"#333",letterSpacing:"1px"}}>{fmt(secs)}</span>
+            {!running?<button style={{background:"#1D9E75",borderRadius:"8px"}} onClick={()=>{setRunning(true);playBeep(660,0.1);}}>▶ Start</button>
+              :<button style={{background:"#e67e22",borderRadius:"8px"}} onClick={()=>setRunning(false)}>⏸ Pause</button>}
+            <button style={{background:"#e74c3c",borderRadius:"8px"}} onClick={()=>{setRunning(false);onEnd(Math.max(1,Math.round(secs/60)));setSecs(0);setOvertime(false);}}>⏹ End</button>
           </div>
         </div>
       );
@@ -206,14 +147,15 @@
       return (
         <div className="stats-grid">
           {[
-            {label:"Waiting",value:waiting,color:"#e67e22"},
-            {label:"Playing",value:playing,color:"#1D9E75"},
-            {label:"Completed",value:completed,color:"#185FA5"},
-            {label:"Avg Session",value:avgMins===0?"—":`${avgMins}m`,color:"#534AB7"},
+            {label:"Waiting",value:waiting,color:"#e67e22",bg:"#fff8f0",icon:"⏳"},
+            {label:"Playing",value:playing,color:"#1D9E75",bg:"#f0fdf8",icon:"🎾"},
+            {label:"Completed",value:completed,color:"#185FA5",bg:"#f0f6ff",icon:"✅"},
+            {label:"Avg Session",value:avgMins===0?"—":`${avgMins}m`,color:"#534AB7",bg:"#f5f0ff",icon:"📊"},
           ].map(s=>(
-            <div key={s.label} className="stat-card" style={{background:"white",borderRadius:"10px",padding:"16px",border:"1px solid #ddd",textAlign:"center"}}>
-              <div style={{fontSize:"28px",fontWeight:"bold",color:s.color}}>{s.value}</div>
-              <div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{s.label}</div>
+            <div key={s.label} className="stat-card card" style={{background:s.bg,borderRadius:"14px",padding:"16px 12px",border:`1px solid ${s.color}22`,textAlign:"center"}}>
+              <div style={{fontSize:"20px",marginBottom:"4px"}}>{s.icon}</div>
+              <div style={{fontSize:"26px",fontWeight:"700",color:s.color,lineHeight:1}}>{s.value}</div>
+              <div style={{fontSize:"11px",color:"#999",marginTop:"4px",fontWeight:"500"}}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -224,14 +166,44 @@
       const [tick, setTick] = useState(0);
       useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),30000); return ()=>clearInterval(t); },[]);
       const avail=getCourtAvailability(court.name,queue,sessionStartTimes,avg);
+      const occupied=court.status==="occupied";
       return (
-        <div className="card" style={{padding:"14px",borderRadius:"8px",textAlign:"center",background:court.status==="occupied"?"#fff0f0":"#f0fdf8",border:`1px solid ${court.status==="occupied"?"#e74c3c":"#1D9E75"}`,transition:"all 0.3s ease"}}>
-          <div style={{fontSize:"22px",marginBottom:"6px"}}>{court.status==="occupied"?"🔴":"🟢"}</div>
-          <div style={{fontWeight:"bold",fontSize:"15px"}}>{court.name}</div>
-          <div style={{fontSize:"12px",marginTop:"4px",fontWeight:"500",color:court.status==="occupied"?"#e74c3c":"#1D9E75"}}>{court.status==="occupied"?"Occupied":"Available"}</div>
-          {court.currentPlayer&&<div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{court.currentPlayer}</div>}
-          {avail&&<div style={{marginTop:"6px",padding:"4px 8px",background:"#fff3cd",borderRadius:"6px",fontSize:"11px",color:"#856404"}}>🕐 Free ~{avail.availableAt}{avail.remainingMins>0&&<span style={{display:"block",color:"#aaa",fontSize:"10px"}}>{avail.remainingMins} min left</span>}</div>}
-          <div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{queue.filter(p=>p.court===court.name&&p.status==="waiting").length} waiting</div>
+        <div className="card" style={{padding:"16px",borderRadius:"14px",textAlign:"center",background:occupied?"#fff5f5":"#f0fdf8",border:`1.5px solid ${occupied?"#ffcccc":"#b2f0d8"}`,transition:"all 0.3s ease"}}>
+          <div style={{fontSize:"28px",marginBottom:"6px"}}>{occupied?"🔴":"🟢"}</div>
+          <div style={{fontWeight:"700",fontSize:"15px",marginBottom:"2px"}}>{court.name}</div>
+          <div style={{fontSize:"12px",fontWeight:"600",color:occupied?"#e74c3c":"#1D9E75",marginBottom:"4px"}}>{occupied?"Occupied":"Available"}</div>
+          {court.currentPlayer&&<div style={{fontSize:"12px",color:"#888",marginBottom:"4px",fontStyle:"italic"}}>{court.currentPlayer}</div>}
+          {avail&&(
+            <div style={{padding:"4px 8px",background:"#fff8e1",borderRadius:"8px",fontSize:"11px",color:"#e67e22",fontWeight:"500",marginBottom:"4px",border:"1px solid #ffe082"}}>
+              🕐 Free ~{avail.availableAt}
+              {avail.remainingMins>0&&<span style={{display:"block",color:"#aaa",fontSize:"10px",fontWeight:"400"}}>{avail.remainingMins} min left</span>}
+            </div>
+          )}
+          <div style={{fontSize:"12px",color:"#aaa",marginTop:"2px"}}>
+            {queue.filter(p=>p.court===court.name&&p.status==="waiting").length} waiting
+          </div>
+        </div>
+      );
+    }
+
+    function CheckInModal({ player, onConfirm, onCancel }) {
+      if (!player) return null;
+      return (
+        <div className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",backdropFilter:"blur(4px)"}}>
+          <div className="modal-box card" style={{background:"white",borderRadius:"20px",padding:"36px 28px",maxWidth:"380px",width:"100%",textAlign:"center",boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}}>
+            <div style={{fontSize:"56px",marginBottom:"16px"}}>🎾</div>
+            <h2 style={{marginBottom:"8px",fontSize:"22px",fontWeight:"700"}}>Ready to Play?</h2>
+            <p style={{color:"#888",fontSize:"14px",marginBottom:"6px"}}>
+              <strong style={{color:"#222"}}>{player.name}</strong> · {player.court}
+            </p>
+            <p style={{color:"#aaa",fontSize:"13px",marginBottom:"28px",lineHeight:"1.6"}}>
+              Confirm you're at the court and ready. Your timer starts immediately.
+            </p>
+            <div style={{display:"flex",gap:"12px",justifyContent:"center"}}>
+              <button style={{background:"#f0f0f0",color:"#555",padding:"12px 24px",fontSize:"14px",borderRadius:"10px"}} onClick={onCancel}>Not Yet</button>
+              <button style={{background:"linear-gradient(135deg,#1D9E75,#0f7a5a)",padding:"12px 28px",fontSize:"14px",fontWeight:"600",borderRadius:"10px",boxShadow:"0 4px 12px rgba(29,158,117,0.3)"}} onClick={onConfirm}>✅ I'm Ready!</button>
+            </div>
+          </div>
         </div>
       );
     }
@@ -239,33 +211,33 @@
     function AdminPanel({ queue, courts, onRemovePlayer, onResetCourt, onClearQueue }) {
       const [open, setOpen] = useState(false);
       return (
-        <div className="card" style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #e74c3c"}}>
+        <div className="card" style={{borderRadius:"14px",padding:"20px",marginBottom:"20px",border:"1.5px solid #ffe0e0",background:"#fff5f5"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <h3>🔧 Admin Controls</h3>
-            <button style={{background:open?"#e74c3c":"#888"}} onClick={()=>setOpen(!open)}>{open?"Hide":"Show"}</button>
+            <h3 style={{fontSize:"15px",fontWeight:"700"}}>🔧 Admin Controls</h3>
+            <button style={{background:open?"#e74c3c":"#999",padding:"6px 14px",fontSize:"12px"}} onClick={()=>setOpen(!open)}>{open?"Hide ▲":"Show ▼"}</button>
           </div>
           {open&&(
             <div style={{marginTop:"16px"}}>
               <div style={{marginBottom:"16px"}}>
-                <h4 style={{marginBottom:"8px",color:"#555"}}>Reset Courts</h4>
+                <p style={{fontSize:"12px",color:"#999",fontWeight:"600",marginBottom:"8px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Reset Courts</p>
                 <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
-                  {courts.map(c=><button key={c.id} style={{background:c.status==="occupied"?"#e74c3c":"#aaa"}} onClick={()=>onResetCourt(c.id)}>Reset {c.name}</button>)}
+                  {courts.map(c=><button key={c.id} style={{background:c.status==="occupied"?"#e74c3c":"#bbb",fontSize:"12px"}} onClick={()=>onResetCourt(c.id)}>Reset {c.name}</button>)}
                 </div>
               </div>
               <div style={{marginBottom:"16px"}}>
-                <h4 style={{marginBottom:"8px",color:"#555"}}>Remove Players</h4>
-                {queue.length===0?<p style={{color:"#aaa",fontSize:"13px"}}>No players in queue</p>:(
+                <p style={{fontSize:"12px",color:"#999",fontWeight:"600",marginBottom:"8px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Remove Players</p>
+                {queue.length===0?<p style={{color:"#bbb",fontSize:"13px"}}>No players in queue</p>:(
                   <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
                     {queue.map(p=>(
-                      <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"#fafafa",borderRadius:"6px",border:"1px solid #eee",flexWrap:"wrap",gap:"8px"}}>
-                        <span style={{fontSize:"13px"}}><strong>{p.name}</strong><span style={{color:"#888",marginLeft:"8px"}}>{p.court}</span></span>
+                      <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"white",borderRadius:"8px",border:"1px solid #eee",flexWrap:"wrap",gap:"8px"}}>
+                        <span style={{fontSize:"13px"}}><strong>{p.name}</strong><span style={{color:"#aaa",marginLeft:"8px",fontSize:"12px"}}>{p.court}</span></span>
                         <button style={{background:"#e74c3c",fontSize:"12px",padding:"4px 10px"}} onClick={()=>onRemovePlayer(p.id)}>Remove</button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <button style={{background:"#e74c3c",width:"100%",padding:"10px"}} onClick={onClearQueue}>🗑 Clear Entire Queue</button>
+              <button style={{background:"#e74c3c",width:"100%",padding:"11px",borderRadius:"10px",fontSize:"14px"}} onClick={onClearQueue}>🗑 Clear Entire Queue</button>
             </div>
           )}
         </div>
@@ -277,28 +249,88 @@
       const prevPos=useRef(position);
       useEffect(()=>{ if(prevPos.current!==position){ setAnimate(true); setTimeout(()=>setAnimate(false),400); prevPos.current=position; } },[position]);
       return (
-        <div className={animate?"badge-pop":""} style={{width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,background:isPlaying?"#1D9E75":"#ddd",color:isPlaying?"white":"#555",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",fontSize:"16px",transition:"background 0.3s ease"}}>{position}</div>
+        <div className={animate?"badge-pop":""} style={{
+          width:"38px",height:"38px",borderRadius:"50%",flexShrink:0,
+          background:isPlaying?"linear-gradient(135deg,#1D9E75,#0f7a5a)":"#f0f0f0",
+          color:isPlaying?"white":"#888",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          fontWeight:"700",fontSize:"16px",
+          boxShadow:isPlaying?"0 4px 12px rgba(29,158,117,0.3)":"none",
+          transition:"all 0.3s ease"
+        }}>{position}</div>
       );
     }
 
     function PlayerRow({ player, idx, avg, onStart, onLeave, onEnd, onOvertime, isNew }) {
       return (
         <div className={`player-row${player.status==="playing"?" playing":""} ${isNew?"player-enter":""}`}
-          style={{display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px",marginBottom:"10px",borderRadius:"8px",background:player.status==="playing"?"#f0fdf8":"#fafafa",border:`1px solid ${player.status==="playing"?"#1D9E75":"#eee"}`,transition:"background 0.3s ease, border-color 0.3s ease"}}>
+          style={{display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px 16px",marginBottom:"10px",borderRadius:"12px",
+            background:player.status==="playing"?"#f0fdf8":"#fafafa",
+            border:`1.5px solid ${player.status==="playing"?"#b2f0d8":"#f0f0f0"}`,
+            transition:"all 0.3s ease",
+          }}>
           <PositionBadge position={idx+1} isPlaying={player.status==="playing"} />
           <div style={{flex:1,minWidth:0}}>
-            <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
-              <strong style={{wordBreak:"break-word"}}>{player.name}</strong>
-              <span className="muted" style={{fontSize:"13px",color:"#888"}}>{player.court}</span>
-              <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:player.status==="playing"?"#1D9E75":"#eee",color:player.status==="playing"?"white":"#555",transition:"background 0.3s ease",whiteSpace:"nowrap"}}>{player.status==="playing"?"Playing":"Waiting"}</span>
-              {idx===0&&player.status==="waiting"&&<span className="badge-pop" style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:"#fff3cd",color:"#856404",fontWeight:"500",whiteSpace:"nowrap"}}>🎾 Next!</span>}
+            <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap",marginBottom:"4px"}}>
+              <strong style={{wordBreak:"break-word",fontSize:"15px"}}>{player.name}</strong>
+              <span style={{fontSize:"12px",color:"#aaa",background:"#f5f5f5",padding:"2px 8px",borderRadius:"20px"}}>{player.court}</span>
+              <span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"20px",fontWeight:"600",
+                background:player.status==="playing"?"#dcfce7":"#f5f5f5",
+                color:player.status==="playing"?"#1D9E75":"#999"
+              }}>{player.status==="playing"?"● Playing":"○ Waiting"}</span>
+              {idx===0&&player.status==="waiting"&&(
+                <span className="badge-pop" style={{fontSize:"11px",padding:"2px 10px",borderRadius:"20px",background:"#fff8e1",color:"#e67e22",fontWeight:"700",border:"1px solid #ffe082",whiteSpace:"nowrap"}}>
+                  🎾 You're next!
+                </span>
+              )}
             </div>
-            {player.status==="waiting"&&<div className="muted" style={{fontSize:"13px",color:"#888",marginTop:"4px",transition:"all 0.3s ease"}}>⏳ {formatWait(idx*avg)}</div>}
+            {player.status==="waiting"&&<div style={{fontSize:"13px",color:"#bbb",marginTop:"2px"}}>⏳ {formatWait(idx*avg)}</div>}
             {player.status==="playing"&&<Timer onEnd={(d)=>onEnd(player.id,d)} onOvertime={()=>onOvertime(player)} />}
           </div>
           <div className="player-actions">
-            {player.status==="waiting"&&<button style={{background:"#1D9E75",whiteSpace:"nowrap"}} onClick={()=>onStart(player.id)}>Start</button>}
-            <button style={{background:"#e74c3c"}} onClick={()=>onLeave(player.id)}>Leave</button>
+            {player.status==="waiting"&&<button style={{background:"#1D9E75",whiteSpace:"nowrap",fontSize:"12px",padding:"7px 14px"}} onClick={()=>onStart(player.id)}>▶ Start</button>}
+            <button style={{background:"#fee2e2",color:"#e74c3c",fontSize:"12px",padding:"7px 14px"}} onClick={()=>onLeave(player.id)}>Leave</button>
+          </div>
+        </div>
+      );
+    }
+
+    function SessionChart({ history }) {
+      if (history.length===0) return null;
+      const last10=history.slice(-10);
+      const maxDur=Math.max(...last10.map(h=>h.duration),1);
+      const courtColors={"Court 1":"#1D9E75","Court 2":"#185FA5","Court 3":"#534AB7"};
+      return (
+        <div className="card" style={{borderRadius:"14px",padding:"20px",marginTop:"20px",border:"1px solid #ebebeb"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}>
+            <h3 style={{fontSize:"15px",fontWeight:"700"}}>📊 Session Duration Chart</h3>
+            <div style={{display:"flex",gap:"12px",flexWrap:"wrap"}}>
+              {Object.entries(courtColors).map(([court,color])=>(
+                <span key={court} style={{display:"flex",alignItems:"center",gap:"5px",fontSize:"12px",color:"#999"}}>
+                  <span style={{width:"10px",height:"10px",borderRadius:"3px",background:color,display:"inline-block"}}></span>{court}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"flex-end",gap:"6px",height:"160px",padding:"0 4px"}}>
+            {last10.map((h,i)=>{
+              const heightPct=(h.duration/maxDur)*100;
+              const color=courtColors[h.court]||"#1D9E75";
+              const isOvertime=h.duration>=MAX_PLAY_MINUTES;
+              return (
+                <div key={h.id} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",height:"100%",justifyContent:"flex-end"}}>
+                  <span style={{fontSize:"10px",color:"#aaa",fontWeight:"600"}}>{h.duration}m</span>
+                  <div style={{width:"100%",height:`${heightPct}%`,minHeight:"4px",borderRadius:"6px 6px 0 0",background:isOvertime?"#e74c3c":color,transition:"height 0.5s ease",cursor:"default",position:"relative"}} title={`${h.playerName} — ${h.court} — ${h.duration} min`}>
+                    {isOvertime&&<div style={{position:"absolute",top:"-16px",left:"50%",transform:"translateX(-50%)",fontSize:"10px"}}>⚠️</div>}
+                  </div>
+                  <span style={{fontSize:"9px",color:"#ccc",textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",width:"100%",maxWidth:"40px"}}>{h.playerName.split(" ")[0]}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{borderTop:"1px solid #f0f0f0",marginTop:"10px",paddingTop:"10px",display:"flex",justifyContent:"space-between",fontSize:"11px",color:"#ccc",fontWeight:"500"}}>
+            <span>Last {last10.length} sessions</span>
+            <span>Max: {maxDur} min · Avg: {Math.round(last10.reduce((s,h)=>s+h.duration,0)/last10.length)} min</span>
           </div>
         </div>
       );
@@ -307,22 +339,26 @@
     function HistoryLog({ history }) {
       if (history.length===0) return null;
       return (
-        <div className="card" style={{background:"white",borderRadius:"10px",padding:"20px",marginTop:"24px",border:"1px solid #ddd",overflowX:"auto"}}>
-          <h3 style={{marginBottom:"14px"}}>📋 Session History</h3>
+        <div className="card" style={{borderRadius:"14px",padding:"20px",marginTop:"20px",border:"1px solid #ebebeb",overflowX:"auto"}}>
+          <h3 style={{marginBottom:"14px",fontSize:"15px",fontWeight:"700"}}>📋 Session History</h3>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:"13px",minWidth:"400px"}}>
             <thead>
-              <tr style={{borderBottom:"2px solid #eee"}}>
-                {["#","Player","Court","Duration","Ended"].map(h=><th key={h} style={{textAlign:"left",padding:"8px",color:"#888",fontWeight:"500"}}>{h}</th>)}
+              <tr style={{borderBottom:"2px solid #f5f5f5"}}>
+                {["#","Player","Court","Duration","Ended"].map(h=><th key={h} style={{textAlign:"left",padding:"8px",color:"#ccc",fontWeight:"600",fontSize:"11px",textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {[...history].reverse().map((h,i)=>(
-                <tr key={h.id} className="history-row player-enter" style={{borderBottom:"1px solid #f0f0f0"}}>
-                  <td style={{padding:"8px",color:"#aaa"}}>{history.length-i}</td>
-                  <td style={{padding:"8px",fontWeight:"500"}}>{h.playerName}</td>
-                  <td className="muted" style={{padding:"8px",color:"#888"}}>{h.court}</td>
-                  <td style={{padding:"8px"}}><span style={{background:h.duration>=MAX_PLAY_MINUTES?"#fff0f0":"#f0fdf8",color:h.duration>=MAX_PLAY_MINUTES?"#e74c3c":"#1D9E75",padding:"2px 8px",borderRadius:"20px",fontWeight:"500"}}>{h.duration} min {h.duration>=MAX_PLAY_MINUTES&&"⚠️"}</span></td>
-                  <td className="muted" style={{padding:"8px",color:"#aaa"}}>{formatTime(h.endedAt)}</td>
+                <tr key={h.id} className="history-row player-enter" style={{borderBottom:"1px solid #f9f9f9"}}>
+                  <td style={{padding:"10px 8px",color:"#ddd",fontSize:"12px"}}>{history.length-i}</td>
+                  <td style={{padding:"10px 8px",fontWeight:"600"}}>{h.playerName}</td>
+                  <td style={{padding:"10px 8px",color:"#aaa",fontSize:"12px"}}>{h.court}</td>
+                  <td style={{padding:"10px 8px"}}>
+                    <span style={{background:h.duration>=MAX_PLAY_MINUTES?"#fff0f0":"#f0fdf8",color:h.duration>=MAX_PLAY_MINUTES?"#e74c3c":"#1D9E75",padding:"3px 10px",borderRadius:"20px",fontWeight:"600",fontSize:"12px"}}>
+                      {h.duration} min {h.duration>=MAX_PLAY_MINUTES&&"⚠️"}
+                    </span>
+                  </td>
+                  <td style={{padding:"10px 8px",color:"#ccc",fontSize:"12px"}}>{formatTime(h.endedAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -384,10 +420,7 @@
         if (newQueue.length>0&&newQueue[0].status==="waiting") { addNotification(`🎾 ${newQueue[0].name} — you are next!`,"warning"); if(soundOn) playAlertSound(); }
       };
 
-      const requestStart=(id)=>{
-        const player=queue.find(p=>p.id===id);
-        if (player) setCheckInPlayer(player);
-      };
+      const requestStart=(id)=>{ const player=queue.find(p=>p.id===id); if(player) setCheckInPlayer(player); };
 
       const confirmStart=()=>{
         if (!checkInPlayer) return;
@@ -435,48 +468,64 @@
         <div style={{minHeight:"100vh"}}>
           <NotificationBanner notifications={notifications} />
           <CheckInModal player={checkInPlayer} onConfirm={confirmStart} onCancel={()=>setCheckInPlayer(null)} />
-          <div style={{background:"#1D9E75",padding:"14px 20px",display:"flex",alignItems:"center",gap:"10px"}}>
-            <span style={{fontSize:"22px"}}>🎾</span>
-            <span style={{color:"white",fontSize:"20px",fontWeight:"bold"}}>CourtQueue</span>
-            <span className="navbar-subtitle" style={{color:"#cfffec",fontSize:"13px",marginLeft:"8px"}}>Tennis & Pickleball</span>
+
+          {/* Navbar */}
+          <div style={{background:"linear-gradient(135deg,#1D9E75,#0f7a5a)",padding:"16px 24px",display:"flex",alignItems:"center",gap:"12px",boxShadow:"0 4px 20px rgba(29,158,117,0.3)"}}>
+            <div style={{width:"36px",height:"36px",background:"rgba(255,255,255,0.2)",borderRadius:"10px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px"}}>🎾</div>
+            <div>
+              <div style={{color:"white",fontSize:"18px",fontWeight:"700",letterSpacing:"-0.3px"}}>CourtQueue</div>
+              <div className="navbar-subtitle" style={{color:"rgba(255,255,255,0.7)",fontSize:"12px"}}>Tennis & Pickleball Queue Manager</div>
+            </div>
             <div style={{marginLeft:"auto",display:"flex",gap:"8px"}}>
-              <button style={{background:"rgba(255,255,255,0.2)",fontSize:"18px",padding:"4px 10px"}} onClick={()=>setSoundOn(!soundOn)}>{soundOn?"🔔":"🔕"}</button>
-              <button style={{background:"rgba(255,255,255,0.2)",fontSize:"18px",padding:"4px 10px"}} onClick={()=>setDarkMode(!darkMode)}>{darkMode?"☀️":"🌙"}</button>
+              <button style={{background:"rgba(255,255,255,0.15)",fontSize:"16px",padding:"8px 12px",borderRadius:"10px",backdropFilter:"blur(4px)"}} onClick={()=>setSoundOn(!soundOn)} title={soundOn?"Mute":"Unmute"}>{soundOn?"🔔":"🔕"}</button>
+              <button style={{background:"rgba(255,255,255,0.15)",fontSize:"16px",padding:"8px 12px",borderRadius:"10px",backdropFilter:"blur(4px)"}} onClick={()=>setDarkMode(!darkMode)} title={darkMode?"Light mode":"Dark mode"}>{darkMode?"☀️":"🌙"}</button>
             </div>
           </div>
-          <div style={{maxWidth:"700px",margin:"24px auto",padding:"0 16px"}}>
+
+          <div style={{maxWidth:"720px",margin:"24px auto",padding:"0 16px"}}>
             <StatsBar queue={queue} history={history} />
             <div className="courts-grid">
               {courts.map(c=><CourtCard key={c.id} court={c} queue={queue} sessionStartTimes={sessionStartTimes} avg={avg} />)}
             </div>
             <AdminPanel queue={queue} courts={courts} onRemovePlayer={leave} onResetCourt={handleResetCourt} onClearQueue={handleClearQueue} />
-            <div className="card" style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #ddd"}}>
-              <h3 style={{marginBottom:"14px"}}>Join the Queue</h3>
-              {error&&<p style={{color:"red",fontSize:"13px",marginBottom:"8px"}}>{error}</p>}
+
+            {/* Join Form */}
+            <div className="card" style={{padding:"20px",marginBottom:"20px"}}>
+              <h3 style={{marginBottom:"14px",fontSize:"15px",fontWeight:"700"}}>Join the Queue</h3>
+              {error&&<div style={{background:"#fff0f0",color:"#e74c3c",padding:"8px 12px",borderRadius:"8px",fontSize:"13px",marginBottom:"10px",border:"1px solid #fcc"}}>{error}</div>}
               <div className="join-form-row">
                 <input type="text" placeholder="Your name" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&join()} />
                 <select value={court} onChange={e=>setCourt(e.target.value)} style={{width:"auto"}}>
                   <option>Court 1</option><option>Court 2</option><option>Court 3</option>
                 </select>
-                <button style={{background:"#1D9E75",padding:"8px 20px"}} onClick={join}>Join Queue</button>
+                <button style={{background:"linear-gradient(135deg,#1D9E75,#0f7a5a)",padding:"10px 22px",borderRadius:"10px",fontSize:"14px",fontWeight:"600",boxShadow:"0 4px 12px rgba(29,158,117,0.25)"}} onClick={join}>Join Queue</button>
               </div>
             </div>
-            <div className="card" style={{background:"white",borderRadius:"10px",padding:"20px",border:"1px solid #ddd"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}>
-                <h3>Live Queue</h3>
-                <span className="muted" style={{fontSize:"13px",color:"#888"}}>Avg: {avg} min · {queue.length} in queue</span>
+
+            {/* Live Queue */}
+            <div className="card" style={{padding:"20px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}}>
+                <h3 style={{fontSize:"15px",fontWeight:"700"}}>Live Queue</h3>
+                <span style={{fontSize:"12px",color:"#bbb",background:"#f9f9f9",padding:"4px 10px",borderRadius:"20px",border:"1px solid #f0f0f0"}}>Avg: {avg} min · {queue.length} in queue</span>
               </div>
               <div className="tabs-row">
                 {tabs.map(tab=>(
                   <button key={tab} className={`tab-btn${activeTab===tab?" active":""}`}
-                    style={{background:activeTab===tab?"#1D9E75":"#f0f0f0",color:activeTab===tab?"white":"#555",fontSize:"13px",padding:"6px 12px"}}
+                    style={{background:activeTab===tab?"#1D9E75":"#f9f9f9",color:activeTab===tab?"white":"#888",fontSize:"13px",padding:"7px 14px",borderRadius:"8px",border:activeTab===tab?"none":"1px solid #eee",fontWeight:"500"}}
                     onClick={()=>setActiveTab(tab)}>
-                    {tab} <span style={{marginLeft:"4px",fontSize:"11px",background:activeTab===tab?"rgba(255,255,255,0.3)":"#ddd",padding:"1px 5px",borderRadius:"10px"}}>{tab==="All"?queue.length:queue.filter(p=>p.court===tab).length}</span>
+                    {tab}
+                    <span style={{marginLeft:"5px",fontSize:"11px",background:activeTab===tab?"rgba(255,255,255,0.25)":"#eee",color:activeTab===tab?"white":"#999",padding:"1px 6px",borderRadius:"10px"}}>
+                      {tab==="All"?queue.length:queue.filter(p=>p.court===tab).length}
+                    </span>
                   </button>
                 ))}
               </div>
               {visiblePlayers.length===0?(
-                <p className="queue-empty" style={{color:"#aaa",textAlign:"center",padding:"30px 0"}}>No players in queue yet. Be the first to join! 🎾</p>
+                <div className="queue-empty" style={{textAlign:"center",padding:"40px 0"}}>
+                  <div style={{fontSize:"40px",marginBottom:"10px"}}>🎾</div>
+                  <p style={{color:"#ccc",fontSize:"14px",fontWeight:"500"}}>No players in queue yet</p>
+                  <p style={{color:"#ddd",fontSize:"13px",marginTop:"4px"}}>Be the first to join!</p>
+                </div>
               ):visiblePlayers.map((player,idx)=>(
                 <PlayerRow key={player.id} player={player} idx={idx} avg={avg}
                   onStart={requestStart} onLeave={leave} onEnd={endSession}
@@ -486,6 +535,9 @@
             </div>
             <SessionChart history={history} />
             <HistoryLog history={history} />
+            <div style={{textAlign:"center",padding:"24px 0 8px",color:"#ddd",fontSize:"12px"}}>
+              CourtQueue · Built in 24 hours 🎾
+            </div>
           </div>
         </div>
       );
