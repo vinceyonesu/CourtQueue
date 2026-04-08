@@ -25,6 +25,38 @@
     const DEFAULT_AVG = 30;
     const MAX_PLAY_MINUTES = 60;
 
+    // Sound functions using Web Audio API
+    function playBeep(frequency=880, duration=0.3, type="sine") {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        oscillator.frequency.value = frequency;
+        oscillator.type = type;
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    function playSuccessSound() {
+      playBeep(880, 0.15);
+      setTimeout(()=>playBeep(1100, 0.15), 150);
+      setTimeout(()=>playBeep(1320, 0.3), 300);
+    }
+
+    function playAlertSound() {
+      playBeep(440, 0.2, "square");
+      setTimeout(()=>playBeep(440, 0.2, "square"), 250);
+    }
+
+    function playErrorSound() {
+      playBeep(220, 0.4, "sawtooth");
+    }
+
     function formatWait(mins) {
       if (mins === 0) return "You are next!";
       if (mins < 60) return `~${mins} min wait`;
@@ -66,7 +98,11 @@
         const mins = Math.floor(secs / 60);
         if (mins >= MAX_PLAY_MINUTES && !overtime) {
           setOvertime(true);
+          playErrorSound();
           if (onOvertime) onOvertime();
+        }
+        if (mins === MAX_PLAY_MINUTES - 5 && secs % 60 === 0) {
+          playAlertSound();
         }
       }, [secs]);
       const fmt = (s) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
@@ -79,7 +115,7 @@
           {isWarning&&!isOvertime&&<div style={{background:"#fff3cd",color:"#856404",padding:"6px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:"500",marginBottom:"8px",display:"inline-block"}}>⏰ 5 minutes remaining!</div>}
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
             <span style={{fontSize:"22px",fontWeight:"bold",color:isOvertime?"#e74c3c":isWarning?"#e67e22":running?"#1D9E75":"#333"}}>{fmt(secs)}</span>
-            {!running?<button style={{background:"#1D9E75"}} onClick={()=>setRunning(true)}>Start</button>
+            {!running?<button style={{background:"#1D9E75"}} onClick={()=>{setRunning(true);playBeep(660,0.1);}}>Start</button>
               :<button style={{background:"#e67e22"}} onClick={()=>setRunning(false)}>Pause</button>}
             <button style={{background:"#e74c3c"}} onClick={()=>{setRunning(false);onEnd(Math.max(1,Math.round(secs/60)));setSecs(0);setOvertime(false);}}>End Session</button>
           </div>
@@ -87,21 +123,18 @@
       );
     }
 
-    // NEW: Stats Bar Component
     function StatsBar({ queue, history }) {
       const waiting = queue.filter(p=>p.status==="waiting").length;
       const playing = queue.filter(p=>p.status==="playing").length;
       const completed = history.length;
       const totalMins = history.reduce((s,h)=>s+h.duration,0);
       const avgMins = completed===0?0:Math.round(totalMins/completed);
-
       const stats = [
-        { label:"Waiting", value:waiting, color:"#e67e22", bg:"#fff3cd" },
-        { label:"Playing", value:playing, color:"#1D9E75", bg:"#f0fdf8" },
-        { label:"Completed Today", value:completed, color:"#185FA5", bg:"#E6F1FB" },
-        { label:"Avg Session", value:avgMins===0?"—":`${avgMins}m`, color:"#534AB7", bg:"#EEEDFE" },
+        {label:"Waiting",value:waiting,color:"#e67e22"},
+        {label:"Playing",value:playing,color:"#1D9E75"},
+        {label:"Completed",value:completed,color:"#185FA5"},
+        {label:"Avg Session",value:avgMins===0?"—":`${avgMins}m`,color:"#534AB7"},
       ];
-
       return (
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",marginBottom:"24px"}}>
           {stats.map(s=>(
@@ -220,6 +253,7 @@
       const [error, setError] = useState("");
       const [notifications, setNotifications] = useState([]);
       const [activeTab, setActiveTab] = useState("All");
+      const [soundOn, setSoundOn] = useState(true);
       const [courts, setCourts] = useState([
         {id:1,name:"Court 1",status:"available",currentPlayer:null},
         {id:2,name:"Court 2",status:"available",currentPlayer:null},
@@ -239,6 +273,7 @@
         const position = queue.length+1;
         setQueue(q=>[...q,{id:Date.now(),name:name.trim(),court,position,status:"waiting"}]);
         addNotification(`✅ ${name.trim()} joined ${court} at position ${position}`);
+        if (soundOn) playBeep(660, 0.2);
         setName(""); setError("");
       };
 
@@ -248,8 +283,10 @@
           setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
         const newQueue = queue.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1}));
         setQueue(newQueue);
-        if (newQueue.length>0&&newQueue[0].status==="waiting")
+        if (newQueue.length>0&&newQueue[0].status==="waiting") {
           addNotification(`🎾 ${newQueue[0].name} — you are next!`,"warning");
+          if (soundOn) playAlertSound();
+        }
       };
 
       const setStatus = (id, status) => {
@@ -257,6 +294,7 @@
         if (status==="playing"&&player) {
           setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"occupied",currentPlayer:player.name}:c));
           addNotification(`🎾 ${player.name} started playing on ${player.court}!`);
+          if (soundOn) playSuccessSound();
         }
         setQueue(q=>q.map(p=>p.id===id?{...p,status}:p));
       };
@@ -267,12 +305,17 @@
           setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
           addNotification(`✅ ${player.name} finished — session was ${duration} min`);
           setHistory(h=>[...h,{id:Date.now(),playerName:player.name,court:player.court,duration,endedAt:new Date()}]);
+          if (soundOn) playSuccessSound();
         }
         setSessions(s=>[...s,duration]);
         const newQueue = queue.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1}));
         setQueue(newQueue);
-        if (newQueue.length>0&&newQueue[0].status==="waiting")
-          setTimeout(()=>addNotification(`🎾 ${newQueue[0].name} — you are next!`,"warning"),500);
+        if (newQueue.length>0&&newQueue[0].status==="waiting") {
+          setTimeout(()=>{
+            addNotification(`🎾 ${newQueue[0].name} — you are next!`,"warning");
+            if (soundOn) playAlertSound();
+          },500);
+        }
       };
 
       const handleResetCourt = (courtId) => {
@@ -289,6 +332,7 @@
         setQueue([]);
         setCourts(cs=>cs.map(c=>({...c,status:"available",currentPlayer:null})));
         addNotification(`🗑 Queue cleared by admin`,"error");
+        if (soundOn) playErrorSound();
       };
 
       const tabs = ["All","Court 1","Court 2","Court 3"];
@@ -300,13 +344,15 @@
             <span style={{fontSize:"22px"}}>🎾</span>
             <span style={{color:"white",fontSize:"20px",fontWeight:"bold"}}>CourtQueue</span>
             <span style={{color:"#cfffec",fontSize:"13px",marginLeft:"8px"}}>Tennis & Pickleball Queue Manager</span>
+            <div style={{marginLeft:"auto"}}>
+              <button style={{background:soundOn?"rgba(255,255,255,0.2)":"rgba(0,0,0,0.2)",fontSize:"18px",padding:"4px 10px"}}
+                onClick={()=>setSoundOn(!soundOn)} title={soundOn?"Mute sounds":"Enable sounds"}>
+                {soundOn?"🔔":"🔕"}
+              </button>
+            </div>
           </div>
           <div style={{maxWidth:"700px",margin:"30px auto",padding:"0 20px"}}>
-
-            {/* Stats Bar */}
             <StatsBar queue={queue} history={history} />
-
-            {/* Court Status */}
             <div style={{display:"flex",gap:"12px",flexWrap:"wrap",marginBottom:"24px"}}>
               {courts.map(c=>(
                 <div key={c.id} style={{flex:"1",minWidth:"140px",padding:"14px",borderRadius:"8px",textAlign:"center",background:c.status==="occupied"?"#fff0f0":"#f0fdf8",border:`1px solid ${c.status==="occupied"?"#e74c3c":"#1D9E75"}`}}>
@@ -318,9 +364,7 @@
                 </div>
               ))}
             </div>
-
             <AdminPanel queue={queue} courts={courts} onRemovePlayer={leave} onResetCourt={handleResetCourt} onClearQueue={handleClearQueue} />
-
             <div style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #ddd"}}>
               <h3 style={{marginBottom:"14px"}}>Join the Queue</h3>
               {error&&<p style={{color:"red",fontSize:"13px",marginBottom:"8px"}}>{error}</p>}
@@ -334,7 +378,6 @@
                 <button style={{background:"#1D9E75"}} onClick={join}>Join Queue</button>
               </div>
             </div>
-
             <div style={{background:"white",borderRadius:"10px",padding:"20px",border:"1px solid #ddd"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px"}}>
                 <h3>Live Queue</h3>
