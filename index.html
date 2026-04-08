@@ -57,13 +57,11 @@
       const [secs, setSecs] = useState(0);
       const [running, setRunning] = useState(false);
       const [overtime, setOvertime] = useState(false);
-
       useEffect(() => {
         let t = null;
         if (running) t = setInterval(() => setSecs(s => s + 1), 1000);
         return () => clearInterval(t);
       }, [running]);
-
       useEffect(() => {
         const mins = Math.floor(secs / 60);
         if (mins >= MAX_PLAY_MINUTES && !overtime) {
@@ -71,74 +69,19 @@
           if (onOvertime) onOvertime();
         }
       }, [secs]);
-
       const fmt = (s) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
       const mins = Math.floor(secs / 60);
       const isWarning = mins >= MAX_PLAY_MINUTES - 5;
       const isOvertime = mins >= MAX_PLAY_MINUTES;
-
       return (
         <div style={{marginTop:"8px"}}>
-          {isOvertime && (
-            <div className="warning-pulse" style={{
-              background:"#e74c3c",color:"white",padding:"6px 12px",
-              borderRadius:"6px",fontSize:"12px",fontWeight:"500",
-              marginBottom:"8px",display:"inline-block"
-            }}>
-              ⚠️ Time is up! Please wrap up your session.
-            </div>
-          )}
-          {isWarning && !isOvertime && (
-            <div style={{
-              background:"#fff3cd",color:"#856404",padding:"6px 12px",
-              borderRadius:"6px",fontSize:"12px",fontWeight:"500",
-              marginBottom:"8px",display:"inline-block"
-            }}>
-              ⏰ 5 minutes remaining!
-            </div>
-          )}
+          {isOvertime&&<div className="warning-pulse" style={{background:"#e74c3c",color:"white",padding:"6px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:"500",marginBottom:"8px",display:"inline-block"}}>⚠️ Time is up! Please wrap up your session.</div>}
+          {isWarning&&!isOvertime&&<div style={{background:"#fff3cd",color:"#856404",padding:"6px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:"500",marginBottom:"8px",display:"inline-block"}}>⏰ 5 minutes remaining!</div>}
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-            <span style={{
-              fontSize:"22px",fontWeight:"bold",
-              color:isOvertime?"#e74c3c":isWarning?"#e67e22":running?"#1D9E75":"#333"
-            }}>{fmt(secs)}</span>
-            {!running
-              ? <button style={{background:"#1D9E75"}} onClick={()=>setRunning(true)}>Start</button>
-              : <button style={{background:"#e67e22"}} onClick={()=>setRunning(false)}>Pause</button>
-            }
-            <button style={{background:"#e74c3c"}} onClick={()=>{
-              setRunning(false);
-              onEnd(Math.max(1, Math.round(secs/60)));
-              setSecs(0);
-              setOvertime(false);
-            }}>End Session</button>
-          </div>
-        </div>
-      );
-    }
-
-    function CourtStatusPanel({ courts }) {
-      return (
-        <div style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #ddd"}}>
-          <h3 style={{marginBottom:"14px"}}>🏟 Court Status</h3>
-          <div style={{display:"flex",gap:"12px",flexWrap:"wrap"}}>
-            {courts.map(court => (
-              <div key={court.id} style={{
-                flex:"1",minWidth:"140px",padding:"14px",borderRadius:"8px",textAlign:"center",
-                background:court.status==="occupied"?"#fff0f0":"#f0fdf8",
-                border:`1px solid ${court.status==="occupied"?"#e74c3c":"#1D9E75"}`
-              }}>
-                <div style={{fontSize:"22px",marginBottom:"6px"}}>{court.status==="occupied"?"🔴":"🟢"}</div>
-                <div style={{fontWeight:"bold",fontSize:"15px"}}>{court.name}</div>
-                <div style={{fontSize:"12px",marginTop:"4px",fontWeight:"500",
-                  color:court.status==="occupied"?"#e74c3c":"#1D9E75"}}>
-                  {court.status==="occupied"?"Occupied":"Available"}
-                </div>
-                {court.currentPlayer&&(
-                  <div style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{court.currentPlayer}</div>
-                )}
-              </div>
-            ))}
+            <span style={{fontSize:"22px",fontWeight:"bold",color:isOvertime?"#e74c3c":isWarning?"#e67e22":running?"#1D9E75":"#333"}}>{fmt(secs)}</span>
+            {!running?<button style={{background:"#1D9E75"}} onClick={()=>setRunning(true)}>Start</button>
+              :<button style={{background:"#e67e22"}} onClick={()=>setRunning(false)}>Pause</button>}
+            <button style={{background:"#e74c3c"}} onClick={()=>{setRunning(false);onEnd(Math.max(1,Math.round(secs/60)));setSecs(0);setOvertime(false);}}>End Session</button>
           </div>
         </div>
       );
@@ -150,50 +93,32 @@
         <div style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #e74c3c"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <h3>🔧 Admin Controls</h3>
-            <button style={{background:open?"#e74c3c":"#888"}} onClick={()=>setOpen(!open)}>
-              {open?"Hide":"Show"} Controls
-            </button>
+            <button style={{background:open?"#e74c3c":"#888"}} onClick={()=>setOpen(!open)}>{open?"Hide":"Show"} Controls</button>
           </div>
-          {open && (
+          {open&&(
             <div style={{marginTop:"16px"}}>
               <div style={{marginBottom:"16px"}}>
                 <h4 style={{marginBottom:"8px",color:"#555"}}>Reset Courts</h4>
                 <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
                   {courts.map(c=>(
-                    <button key={c.id} style={{background:c.status==="occupied"?"#e74c3c":"#aaa"}}
-                      onClick={()=>onResetCourt(c.id)}>
-                      Reset {c.name}
-                    </button>
+                    <button key={c.id} style={{background:c.status==="occupied"?"#e74c3c":"#aaa"}} onClick={()=>onResetCourt(c.id)}>Reset {c.name}</button>
                   ))}
                 </div>
               </div>
               <div style={{marginBottom:"16px"}}>
                 <h4 style={{marginBottom:"8px",color:"#555"}}>Remove Players</h4>
-                {queue.length===0?(
-                  <p style={{color:"#aaa",fontSize:"13px"}}>No players in queue</p>
-                ):(
+                {queue.length===0?<p style={{color:"#aaa",fontSize:"13px"}}>No players in queue</p>:(
                   <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
                     {queue.map(p=>(
-                      <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                        padding:"8px 12px",background:"#fafafa",borderRadius:"6px",border:"1px solid #eee"}}>
-                        <span style={{fontSize:"13px"}}>
-                          <strong>{p.name}</strong>
-                          <span style={{color:"#888",marginLeft:"8px"}}>{p.court}</span>
-                          <span style={{marginLeft:"8px",fontSize:"12px",padding:"2px 6px",borderRadius:"20px",
-                            background:p.status==="playing"?"#1D9E75":"#eee",
-                            color:p.status==="playing"?"white":"#555"}}>
-                            {p.status}
-                          </span>
-                        </span>
-                        <button style={{background:"#e74c3c",fontSize:"12px",padding:"4px 10px"}}
-                          onClick={()=>onRemovePlayer(p.id)}>Remove</button>
+                      <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"#fafafa",borderRadius:"6px",border:"1px solid #eee"}}>
+                        <span style={{fontSize:"13px"}}><strong>{p.name}</strong><span style={{color:"#888",marginLeft:"8px"}}>{p.court}</span></span>
+                        <button style={{background:"#e74c3c",fontSize:"12px",padding:"4px 10px"}} onClick={()=>onRemovePlayer(p.id)}>Remove</button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <button style={{background:"#e74c3c",width:"100%",padding:"10px"}}
-                onClick={onClearQueue}>🗑 Clear Entire Queue</button>
+              <button style={{background:"#e74c3c",width:"100%",padding:"10px"}} onClick={onClearQueue}>🗑 Clear Entire Queue</button>
             </div>
           )}
         </div>
@@ -216,23 +141,59 @@
               </tr>
             </thead>
             <tbody>
-              {[...history].reverse().map((h,i) => (
+              {[...history].reverse().map((h,i)=>(
                 <tr key={h.id} style={{borderBottom:"1px solid #f0f0f0"}}>
                   <td style={{padding:"8px",color:"#aaa"}}>{history.length-i}</td>
                   <td style={{padding:"8px",fontWeight:"500"}}>{h.playerName}</td>
                   <td style={{padding:"8px",color:"#888"}}>{h.court}</td>
-                  <td style={{padding:"8px"}}>
-                    <span style={{background:h.duration>=MAX_PLAY_MINUTES?"#fff0f0":"#f0fdf8",
-                      color:h.duration>=MAX_PLAY_MINUTES?"#e74c3c":"#1D9E75",
-                      padding:"2px 8px",borderRadius:"20px",fontWeight:"500"}}>
-                      {h.duration} min {h.duration>=MAX_PLAY_MINUTES&&"⚠️"}
-                    </span>
-                  </td>
+                  <td style={{padding:"8px"}}><span style={{background:h.duration>=MAX_PLAY_MINUTES?"#fff0f0":"#f0fdf8",color:h.duration>=MAX_PLAY_MINUTES?"#e74c3c":"#1D9E75",padding:"2px 8px",borderRadius:"20px",fontWeight:"500"}}>{h.duration} min {h.duration>=MAX_PLAY_MINUTES&&"⚠️"}</span></td>
                   <td style={{padding:"8px",color:"#aaa"}}>{formatTime(h.endedAt)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      );
+    }
+
+    // NEW: Court Queue Tab Component
+    function CourtQueueTab({ courtName, players, avg, onStart, onLeave, onEnd, onOvertime }) {
+      const courtPlayers = players.filter(p => p.court === courtName);
+      return (
+        <div>
+          {courtPlayers.length === 0 ? (
+            <p style={{color:"#aaa",textAlign:"center",padding:"20px 0",fontSize:"13px"}}>No players in {courtName} queue</p>
+          ) : courtPlayers.map(player => (
+            <div key={player.id} style={{
+              display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px",marginBottom:"10px",borderRadius:"8px",
+              background:player.status==="playing"?"#f0fdf8":"#fafafa",
+              border:`1px solid ${player.status==="playing"?"#1D9E75":"#eee"}`
+            }}>
+              <div style={{width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,
+                background:player.status==="playing"?"#1D9E75":"#ddd",
+                color:player.status==="playing"?"white":"#555",
+                display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",fontSize:"16px"
+              }}>{courtPlayers.indexOf(player)+1}</div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
+                  <strong>{player.name}</strong>
+                  <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",
+                    background:player.status==="playing"?"#1D9E75":"#eee",
+                    color:player.status==="playing"?"white":"#555"
+                  }}>{player.status==="playing"?"Playing":"Waiting"}</span>
+                  {courtPlayers.indexOf(player)===0&&player.status==="waiting"&&(
+                    <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:"#fff3cd",color:"#856404",fontWeight:"500"}}>🎾 You're next!</span>
+                  )}
+                </div>
+                {player.status==="waiting"&&<div style={{fontSize:"13px",color:"#888",marginTop:"4px"}}>⏳ {formatWait(courtPlayers.indexOf(player)*avg)}</div>}
+                {player.status==="playing"&&<Timer onEnd={(d)=>onEnd(player.id,d)} onOvertime={()=>onOvertime(player)} />}
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+                {player.status==="waiting"&&<button style={{background:"#1D9E75"}} onClick={()=>onStart(player.id)}>Start Playing</button>}
+                <button style={{background:"#e74c3c"}} onClick={()=>onLeave(player.id)}>Leave</button>
+              </div>
+            </div>
+          ))}
         </div>
       );
     }
@@ -245,14 +206,14 @@
       const [court, setCourt] = useState("Court 1");
       const [error, setError] = useState("");
       const [notifications, setNotifications] = useState([]);
+      const [activeTab, setActiveTab] = useState("All");
       const [courts, setCourts] = useState([
         {id:1,name:"Court 1",status:"available",currentPlayer:null},
         {id:2,name:"Court 2",status:"available",currentPlayer:null},
         {id:3,name:"Court 3",status:"available",currentPlayer:null},
       ]);
 
-      const avg = sessions.length===0 ? DEFAULT_AVG
-        : Math.round(sessions.slice(-5).reduce((s,x)=>s+x,0)/Math.min(sessions.length,5));
+      const avg = sessions.length===0?DEFAULT_AVG:Math.round(sessions.slice(-5).reduce((s,x)=>s+x,0)/Math.min(sessions.length,5));
 
       const addNotification = (message, type="success") => {
         const id = Date.now();
@@ -317,6 +278,8 @@
         addNotification(`🗑 Queue cleared by admin`,"error");
       };
 
+      const tabs = ["All","Court 1","Court 2","Court 3"];
+
       return (
         <div>
           <NotificationBanner notifications={notifications} />
@@ -326,9 +289,20 @@
             <span style={{color:"#cfffec",fontSize:"13px",marginLeft:"8px"}}>Tennis & Pickleball Queue Manager</span>
           </div>
           <div style={{maxWidth:"700px",margin:"30px auto",padding:"0 20px"}}>
-            <CourtStatusPanel courts={courts} />
-            <AdminPanel queue={queue} courts={courts}
-              onRemovePlayer={leave} onResetCourt={handleResetCourt} onClearQueue={handleClearQueue} />
+            <div style={{display:"flex",gap:"12px",flexWrap:"wrap",marginBottom:"24px"}}>
+              {courts.map(c=>(
+                <div key={c.id} style={{flex:"1",minWidth:"140px",padding:"14px",borderRadius:"8px",textAlign:"center",background:c.status==="occupied"?"#fff0f0":"#f0fdf8",border:`1px solid ${c.status==="occupied"?"#e74c3c":"#1D9E75"}`}}>
+                  <div style={{fontSize:"22px",marginBottom:"6px"}}>{c.status==="occupied"?"🔴":"🟢"}</div>
+                  <div style={{fontWeight:"bold",fontSize:"15px"}}>{c.name}</div>
+                  <div style={{fontSize:"12px",marginTop:"4px",fontWeight:"500",color:c.status==="occupied"?"#e74c3c":"#1D9E75"}}>{c.status==="occupied"?"Occupied":"Available"}</div>
+                  {c.currentPlayer&&<div style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{c.currentPlayer}</div>}
+                  <div style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>
+                    {queue.filter(p=>p.court===c.name&&p.status==="waiting").length} waiting
+                  </div>
+                </div>
+              ))}
+            </div>
+            <AdminPanel queue={queue} courts={courts} onRemovePlayer={leave} onResetCourt={handleResetCourt} onClearQueue={handleClearQueue} />
             <div style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #ddd"}}>
               <h3 style={{marginBottom:"14px"}}>Join the Queue</h3>
               {error&&<p style={{color:"red",fontSize:"13px",marginBottom:"8px"}}>{error}</p>}
@@ -345,49 +319,55 @@
             <div style={{background:"white",borderRadius:"10px",padding:"20px",border:"1px solid #ddd"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px"}}>
                 <h3>Live Queue</h3>
-                <span style={{fontSize:"13px",color:"#888"}}>Avg game: {avg} min{sessions.length>0&&` · ${sessions.length} completed`}</span>
+                <span style={{fontSize:"13px",color:"#888"}}>Avg: {avg} min · {queue.length} in queue</span>
               </div>
-              {queue.length===0?(
-                <p style={{color:"#aaa",textAlign:"center",padding:"30px 0"}}>No players in queue yet. Be the first to join! 🎾</p>
-              ):queue.map(player=>(
-                <div key={player.id} style={{
-                  display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px",marginBottom:"10px",borderRadius:"8px",
-                  background:player.status==="playing"?"#f0fdf8":"#fafafa",
-                  border:`1px solid ${player.status==="playing"?"#1D9E75":"#eee"}`
-                }}>
-                  <div style={{width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,
-                    background:player.status==="playing"?"#1D9E75":"#ddd",
-                    color:player.status==="playing"?"white":"#555",
-                    display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",fontSize:"16px"
-                  }}>{player.position}</div>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
-                      <strong>{player.name}</strong>
-                      <span style={{fontSize:"13px",color:"#888"}}>{player.court}</span>
-                      <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",
-                        background:player.status==="playing"?"#1D9E75":"#eee",
-                        color:player.status==="playing"?"white":"#555"
-                      }}>{player.status==="playing"?"Playing":"Waiting"}</span>
-                      {player.position===1&&player.status==="waiting"&&(
-                        <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:"#fff3cd",color:"#856404",fontWeight:"500"}}>
-                          🎾 You're next!
-                        </span>
-                      )}
+              <div style={{display:"flex",gap:"8px",marginBottom:"16px",borderBottom:"1px solid #eee",paddingBottom:"12px"}}>
+                {tabs.map(tab=>(
+                  <button key={tab} style={{
+                    background:activeTab===tab?"#1D9E75":"#f0f0f0",
+                    color:activeTab===tab?"white":"#555",
+                    fontSize:"13px",padding:"6px 14px"
+                  }} onClick={()=>setActiveTab(tab)}>
+                    {tab}
+                    <span style={{marginLeft:"6px",fontSize:"11px",background:activeTab===tab?"rgba(255,255,255,0.3)":"#ddd",padding:"1px 6px",borderRadius:"10px"}}>
+                      {tab==="All"?queue.length:queue.filter(p=>p.court===tab).length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {activeTab==="All"?(
+                queue.length===0?(
+                  <p style={{color:"#aaa",textAlign:"center",padding:"30px 0"}}>No players in queue yet. Be the first to join! 🎾</p>
+                ):queue.map(player=>(
+                  <div key={player.id} style={{display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px",marginBottom:"10px",borderRadius:"8px",background:player.status==="playing"?"#f0fdf8":"#fafafa",border:`1px solid ${player.status==="playing"?"#1D9E75":"#eee"}`}}>
+                    <div style={{width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,background:player.status==="playing"?"#1D9E75":"#ddd",color:player.status==="playing"?"white":"#555",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",fontSize:"16px"}}>{player.position}</div>
+                    <div style={{flex:1}}>
+                      <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
+                        <strong>{player.name}</strong>
+                        <span style={{fontSize:"13px",color:"#888"}}>{player.court}</span>
+                        <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:player.status==="playing"?"#1D9E75":"#eee",color:player.status==="playing"?"white":"#555"}}>{player.status==="playing"?"Playing":"Waiting"}</span>
+                        {player.position===1&&player.status==="waiting"&&<span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:"#fff3cd",color:"#856404",fontWeight:"500"}}>🎾 You're next!</span>}
+                      </div>
+                      {player.status==="waiting"&&<div style={{fontSize:"13px",color:"#888",marginTop:"4px"}}>⏳ {formatWait((player.position-1)*avg)}</div>}
+                      {player.status==="playing"&&<Timer onEnd={(d)=>endSession(player.id,d)} onOvertime={()=>addNotification(`⚠️ ${player.name}'s time is up!`,"error")} />}
                     </div>
-                    {player.status==="waiting"&&<div style={{fontSize:"13px",color:"#888",marginTop:"4px"}}>⏳ {formatWait((player.position-1)*avg)}</div>}
-                    {player.status==="playing"&&(
-                      <Timer
-                        onEnd={(d)=>endSession(player.id,d)}
-                        onOvertime={()=>addNotification(`⚠️ ${player.name}'s time is up on ${player.court}!`,"error")}
-                      />
-                    )}
+                    <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+                      {player.status==="waiting"&&<button style={{background:"#1D9E75"}} onClick={()=>setStatus(player.id,"playing")}>Start Playing</button>}
+                      <button style={{background:"#e74c3c"}} onClick={()=>leave(player.id)}>Leave</button>
+                    </div>
                   </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
-                    {player.status==="waiting"&&<button style={{background:"#1D9E75"}} onClick={()=>setStatus(player.id,"playing")}>Start Playing</button>}
-                    <button style={{background:"#e74c3c"}} onClick={()=>leave(player.id)}>Leave</button>
-                  </div>
-                </div>
-              ))}
+                ))
+              ):(
+                <CourtQueueTab
+                  courtName={activeTab}
+                  players={queue}
+                  avg={avg}
+                  onStart={(id)=>setStatus(id,"playing")}
+                  onLeave={leave}
+                  onEnd={endSession}
+                  onOvertime={(p)=>addNotification(`⚠️ ${p.name}'s time is up!`,"error")}
+                />
+              )}
             </div>
             <HistoryLog history={history} />
           </div>
