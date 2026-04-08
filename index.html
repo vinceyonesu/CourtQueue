@@ -14,8 +14,13 @@
     input, select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 100%; }
     @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .notif { animation: slideIn 0.3s ease; }
     .warning-pulse { animation: pulse 1s infinite; }
+    .player-enter { animation: slideUp 0.35s ease; }
+    .badge-pop { animation: popIn 0.4s ease; }
     body.dark { background: #1a1a2e; color: #e0e0e0; }
     body.dark input, body.dark select { background: #2a2a3e; color: #e0e0e0; border-color: #444; }
     body.dark .card { background: #2a2a3e !important; border-color: #444 !important; }
@@ -28,27 +33,19 @@
     body.dark .queue-empty { color: #666 !important; }
     body.dark .muted { color: #888 !important; }
     body { background: #f4f4f4; }
-
-    /* Responsive styles */
     .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
     .courts-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
     .join-form-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .join-form-row input { flex: 1; min-width: 140px; }
-    .join-form-row select { flex: 0 0 auto; }
     .tabs-row { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px; flex-wrap: wrap; }
     .player-actions { display: flex; flex-direction: column; gap: 6px; }
-
     @media (max-width: 600px) {
       .stats-grid { grid-template-columns: repeat(2,1fr); }
       .courts-grid { grid-template-columns: repeat(1,1fr); }
       .join-form-row { flex-direction: column; }
       .join-form-row input, .join-form-row select, .join-form-row button { width: 100%; }
-      .player-row-inner { flex-wrap: wrap; }
       .player-actions { flex-direction: row; }
-      .tabs-row { gap: 6px; }
       .tabs-row button { font-size: 12px; padding: 5px 10px; }
-      h1, h2, h3 { font-size: 16px; }
-      .navbar-title { font-size: 16px !important; }
       .navbar-subtitle { display: none; }
     }
   </style>
@@ -56,7 +53,7 @@
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
     const DEFAULT_AVG = 30;
     const MAX_PLAY_MINUTES = 60;
 
@@ -177,18 +174,60 @@
       );
     }
 
-    function PlayerRow({ player, idx, avg, onStart, onLeave, onEnd, onOvertime }) {
+    // NEW: Animated position badge
+    function PositionBadge({ position, isPlaying, prevPosition }) {
+      const [animate, setAnimate] = useState(false);
+      const prevPos = useRef(position);
+
+      useEffect(()=>{
+        if (prevPos.current !== position) {
+          setAnimate(true);
+          setTimeout(()=>setAnimate(false), 400);
+          prevPos.current = position;
+        }
+      },[position]);
+
       return (
-        <div className={`player-row${player.status==="playing"?" playing":""}`} style={{display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px",marginBottom:"10px",borderRadius:"8px",background:player.status==="playing"?"#f0fdf8":"#fafafa",border:`1px solid ${player.status==="playing"?"#1D9E75":"#eee"}`}}>
-          <div style={{width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,background:player.status==="playing"?"#1D9E75":"#ddd",color:player.status==="playing"?"white":"#555",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",fontSize:"16px"}}>{idx+1}</div>
+        <div className={animate?"badge-pop":""} style={{
+          width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,
+          background:isPlaying?"#1D9E75":"#ddd",
+          color:isPlaying?"white":"#555",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          fontWeight:"bold",fontSize:"16px",
+          transition:"background 0.3s ease",
+        }}>{position}</div>
+      );
+    }
+
+    function PlayerRow({ player, idx, avg, onStart, onLeave, onEnd, onOvertime, isNew }) {
+      return (
+        <div className={`player-row${player.status==="playing"?" playing":""} ${isNew?"player-enter":""}`}
+          style={{display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px",marginBottom:"10px",borderRadius:"8px",
+            background:player.status==="playing"?"#f0fdf8":"#fafafa",
+            border:`1px solid ${player.status==="playing"?"#1D9E75":"#eee"}`,
+            transition:"background 0.3s ease, border-color 0.3s ease"
+          }}>
+          <PositionBadge position={idx+1} isPlaying={player.status==="playing"} />
           <div style={{flex:1,minWidth:0}}>
-            <div className="player-row-inner" style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
+            <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
               <strong style={{wordBreak:"break-word"}}>{player.name}</strong>
               <span className="muted" style={{fontSize:"13px",color:"#888"}}>{player.court}</span>
-              <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:player.status==="playing"?"#1D9E75":"#eee",color:player.status==="playing"?"white":"#555",whiteSpace:"nowrap"}}>{player.status==="playing"?"Playing":"Waiting"}</span>
-              {idx===0&&player.status==="waiting"&&<span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:"#fff3cd",color:"#856404",fontWeight:"500",whiteSpace:"nowrap"}}>🎾 Next!</span>}
+              <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",
+                background:player.status==="playing"?"#1D9E75":"#eee",
+                color:player.status==="playing"?"white":"#555",
+                transition:"background 0.3s ease",whiteSpace:"nowrap"
+              }}>{player.status==="playing"?"Playing":"Waiting"}</span>
+              {idx===0&&player.status==="waiting"&&(
+                <span className="badge-pop" style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",background:"#fff3cd",color:"#856404",fontWeight:"500",whiteSpace:"nowrap"}}>
+                  🎾 Next!
+                </span>
+              )}
             </div>
-            {player.status==="waiting"&&<div className="muted" style={{fontSize:"13px",color:"#888",marginTop:"4px"}}>⏳ {formatWait(idx*avg)}</div>}
+            {player.status==="waiting"&&(
+              <div className="muted" style={{fontSize:"13px",color:"#888",marginTop:"4px",transition:"all 0.3s ease"}}>
+                ⏳ {formatWait(idx*avg)}
+              </div>
+            )}
             {player.status==="playing"&&<Timer onEnd={(d)=>onEnd(player.id,d)} onOvertime={()=>onOvertime(player)} />}
           </div>
           <div className="player-actions">
@@ -212,7 +251,7 @@
             </thead>
             <tbody>
               {[...history].reverse().map((h,i)=>(
-                <tr key={h.id} className="history-row" style={{borderBottom:"1px solid #f0f0f0"}}>
+                <tr key={h.id} className="history-row player-enter" style={{borderBottom:"1px solid #f0f0f0"}}>
                   <td style={{padding:"8px",color:"#aaa"}}>{history.length-i}</td>
                   <td style={{padding:"8px",fontWeight:"500"}}>{h.playerName}</td>
                   <td className="muted" style={{padding:"8px",color:"#888"}}>{h.court}</td>
@@ -237,6 +276,7 @@
       const [activeTab, setActiveTab] = useState("All");
       const [soundOn, setSoundOn] = useState(true);
       const [darkMode, setDarkMode] = useState(false);
+      const [newPlayerIds, setNewPlayerIds] = useState(new Set());
       const [courts, setCourts] = useState([
         {id:1,name:"Court 1",status:"available",currentPlayer:null},
         {id:2,name:"Court 2",status:"available",currentPlayer:null},
@@ -256,7 +296,10 @@
       const join=()=>{
         if (!name.trim()) { setError("Please enter your name"); return; }
         const position=queue.length+1;
-        setQueue(q=>[...q,{id:Date.now(),name:name.trim(),court,position,status:"waiting"}]);
+        const newId=Date.now();
+        setQueue(q=>[...q,{id:newId,name:name.trim(),court,position,status:"waiting"}]);
+        setNewPlayerIds(ids=>new Set([...ids,newId]));
+        setTimeout(()=>setNewPlayerIds(ids=>{ const n=new Set(ids); n.delete(newId); return n; }),500);
         addNotification(`✅ ${name.trim()} joined ${court} at position ${position}`);
         if (soundOn) playBeep(660,0.2);
         setName(""); setError("");
@@ -305,7 +348,7 @@
           <NotificationBanner notifications={notifications} />
           <div style={{background:"#1D9E75",padding:"14px 20px",display:"flex",alignItems:"center",gap:"10px"}}>
             <span style={{fontSize:"22px"}}>🎾</span>
-            <span className="navbar-title" style={{color:"white",fontSize:"20px",fontWeight:"bold"}}>CourtQueue</span>
+            <span style={{color:"white",fontSize:"20px",fontWeight:"bold"}}>CourtQueue</span>
             <span className="navbar-subtitle" style={{color:"#cfffec",fontSize:"13px",marginLeft:"8px"}}>Tennis & Pickleball</span>
             <div style={{marginLeft:"auto",display:"flex",gap:"8px"}}>
               <button style={{background:"rgba(255,255,255,0.2)",fontSize:"18px",padding:"4px 10px"}} onClick={()=>setSoundOn(!soundOn)}>{soundOn?"🔔":"🔕"}</button>
@@ -316,7 +359,7 @@
             <StatsBar queue={queue} history={history} />
             <div className="courts-grid">
               {courts.map(c=>(
-                <div key={c.id} className="card" style={{padding:"14px",borderRadius:"8px",textAlign:"center",background:c.status==="occupied"?"#fff0f0":"#f0fdf8",border:`1px solid ${c.status==="occupied"?"#e74c3c":"#1D9E75"}`}}>
+                <div key={c.id} className="card" style={{padding:"14px",borderRadius:"8px",textAlign:"center",background:c.status==="occupied"?"#fff0f0":"#f0fdf8",border:`1px solid ${c.status==="occupied"?"#e74c3c":"#1D9E75"}`,transition:"all 0.3s ease"}}>
                   <div style={{fontSize:"22px",marginBottom:"6px"}}>{c.status==="occupied"?"🔴":"🟢"}</div>
                   <div style={{fontWeight:"bold",fontSize:"15px"}}>{c.name}</div>
                   <div style={{fontSize:"12px",marginTop:"4px",fontWeight:"500",color:c.status==="occupied"?"#e74c3c":"#1D9E75"}}>{c.status==="occupied"?"Occupied":"Available"}</div>
@@ -344,7 +387,9 @@
               </div>
               <div className="tabs-row">
                 {tabs.map(tab=>(
-                  <button key={tab} className={`tab-btn${activeTab===tab?" active":""}`} style={{background:activeTab===tab?"#1D9E75":"#f0f0f0",color:activeTab===tab?"white":"#555",fontSize:"13px",padding:"6px 12px"}} onClick={()=>setActiveTab(tab)}>
+                  <button key={tab} className={`tab-btn${activeTab===tab?" active":""}`}
+                    style={{background:activeTab===tab?"#1D9E75":"#f0f0f0",color:activeTab===tab?"white":"#555",fontSize:"13px",padding:"6px 12px"}}
+                    onClick={()=>setActiveTab(tab)}>
                     {tab} <span style={{marginLeft:"4px",fontSize:"11px",background:activeTab===tab?"rgba(255,255,255,0.3)":"#ddd",padding:"1px 5px",borderRadius:"10px"}}>{tab==="All"?queue.length:queue.filter(p=>p.court===tab).length}</span>
                   </button>
                 ))}
@@ -354,7 +399,8 @@
               ):visiblePlayers.map((player,idx)=>(
                 <PlayerRow key={player.id} player={player} idx={idx} avg={avg}
                   onStart={(id)=>setStatus(id,"playing")} onLeave={leave} onEnd={endSession}
-                  onOvertime={(p)=>addNotification(`⚠️ ${p.name}'s time is up!`,"error")} />
+                  onOvertime={(p)=>addNotification(`⚠️ ${p.name}'s time is up!`,"error")}
+                  isNew={newPlayerIds.has(player.id)} />
               ))}
             </div>
             <HistoryLog history={history} />
