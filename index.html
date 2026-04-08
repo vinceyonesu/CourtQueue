@@ -13,7 +13,9 @@
     button { cursor: pointer; border: none; border-radius: 6px; padding: 6px 14px; font-size: 13px; color: white; }
     input, select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
     @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     .notif { animation: slideIn 0.3s ease; }
+    .warning-pulse { animation: pulse 1s infinite; }
   </style>
 </head>
 <body>
@@ -21,6 +23,7 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
     const DEFAULT_AVG = 30;
+    const MAX_PLAY_MINUTES = 60;
 
     function formatWait(mins) {
       if (mins === 0) return "You are next!";
@@ -50,27 +53,66 @@
       );
     }
 
-    function Timer({ onEnd }) {
+    function Timer({ onEnd, onOvertime }) {
       const [secs, setSecs] = useState(0);
       const [running, setRunning] = useState(false);
+      const [overtime, setOvertime] = useState(false);
+
       useEffect(() => {
         let t = null;
         if (running) t = setInterval(() => setSecs(s => s + 1), 1000);
         return () => clearInterval(t);
       }, [running]);
+
+      useEffect(() => {
+        const mins = Math.floor(secs / 60);
+        if (mins >= MAX_PLAY_MINUTES && !overtime) {
+          setOvertime(true);
+          if (onOvertime) onOvertime();
+        }
+      }, [secs]);
+
       const fmt = (s) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+      const mins = Math.floor(secs / 60);
+      const isWarning = mins >= MAX_PLAY_MINUTES - 5;
+      const isOvertime = mins >= MAX_PLAY_MINUTES;
+
       return (
-        <div style={{marginTop:"8px",display:"flex",alignItems:"center",gap:"8px"}}>
-          <span style={{fontSize:"22px",fontWeight:"bold",color:running?"#1D9E75":"#333"}}>{fmt(secs)}</span>
-          {!running
-            ? <button style={{background:"#1D9E75"}} onClick={()=>setRunning(true)}>Start</button>
-            : <button style={{background:"#e67e22"}} onClick={()=>setRunning(false)}>Pause</button>
-          }
-          <button style={{background:"#e74c3c"}} onClick={()=>{
-            setRunning(false);
-            onEnd(Math.max(1, Math.round(secs/60)));
-            setSecs(0);
-          }}>End Session</button>
+        <div style={{marginTop:"8px"}}>
+          {isOvertime && (
+            <div className="warning-pulse" style={{
+              background:"#e74c3c",color:"white",padding:"6px 12px",
+              borderRadius:"6px",fontSize:"12px",fontWeight:"500",
+              marginBottom:"8px",display:"inline-block"
+            }}>
+              ⚠️ Time is up! Please wrap up your session.
+            </div>
+          )}
+          {isWarning && !isOvertime && (
+            <div style={{
+              background:"#fff3cd",color:"#856404",padding:"6px 12px",
+              borderRadius:"6px",fontSize:"12px",fontWeight:"500",
+              marginBottom:"8px",display:"inline-block"
+            }}>
+              ⏰ 5 minutes remaining!
+            </div>
+          )}
+          <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+            <span style={{
+              fontSize:"22px",fontWeight:"bold",
+              color:isOvertime?"#e74c3c":isWarning?"#e67e22":running?"#1D9E75":"#333"
+            }}>{fmt(secs)}</span>
+            {!running
+              ? <button style={{background:"#1D9E75"}} onClick={()=>setRunning(true)}>Start</button>
+              : <button style={{background:"#e67e22"}} onClick={()=>setRunning(false)}>Pause</button>
+            }
+            <button style={{background:"#e74c3c"}} onClick={()=>{
+              setRunning(false);
+              onEnd(Math.max(1, Math.round(secs/60)));
+              setSecs(0);
+              setOvertime(false);
+            }}>End Session</button>
+          </div>
         </div>
       );
     }
@@ -144,18 +186,14 @@
                           </span>
                         </span>
                         <button style={{background:"#e74c3c",fontSize:"12px",padding:"4px 10px"}}
-                          onClick={()=>onRemovePlayer(p.id)}>
-                          Remove
-                        </button>
+                          onClick={()=>onRemovePlayer(p.id)}>Remove</button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
               <button style={{background:"#e74c3c",width:"100%",padding:"10px"}}
-                onClick={onClearQueue}>
-                🗑 Clear Entire Queue
-              </button>
+                onClick={onClearQueue}>🗑 Clear Entire Queue</button>
             </div>
           )}
         </div>
@@ -184,8 +222,10 @@
                   <td style={{padding:"8px",fontWeight:"500"}}>{h.playerName}</td>
                   <td style={{padding:"8px",color:"#888"}}>{h.court}</td>
                   <td style={{padding:"8px"}}>
-                    <span style={{background:"#f0fdf8",color:"#1D9E75",padding:"2px 8px",borderRadius:"20px",fontWeight:"500"}}>
-                      {h.duration} min
+                    <span style={{background:h.duration>=MAX_PLAY_MINUTES?"#fff0f0":"#f0fdf8",
+                      color:h.duration>=MAX_PLAY_MINUTES?"#e74c3c":"#1D9E75",
+                      padding:"2px 8px",borderRadius:"20px",fontWeight:"500"}}>
+                      {h.duration} min {h.duration>=MAX_PLAY_MINUTES&&"⚠️"}
                     </span>
                   </td>
                   <td style={{padding:"8px",color:"#aaa"}}>{formatTime(h.endedAt)}</td>
@@ -262,13 +302,13 @@
       };
 
       const handleResetCourt = (courtId) => {
-        const court = courts.find(c=>c.id===courtId);
-        if (court?.currentPlayer) {
-          const player = queue.find(p=>p.name===court.currentPlayer);
+        const c = courts.find(x=>x.id===courtId);
+        if (c?.currentPlayer) {
+          const player = queue.find(p=>p.name===c.currentPlayer);
           if (player) leave(player.id);
         }
         setCourts(cs=>cs.map(c=>c.id===courtId?{...c,status:"available",currentPlayer:null}:c));
-        addNotification(`🔧 ${court?.name} has been reset`,"warning");
+        addNotification(`🔧 ${c?.name} has been reset`,"warning");
       };
 
       const handleClearQueue = () => {
@@ -287,13 +327,8 @@
           </div>
           <div style={{maxWidth:"700px",margin:"30px auto",padding:"0 20px"}}>
             <CourtStatusPanel courts={courts} />
-            <AdminPanel
-              queue={queue}
-              courts={courts}
-              onRemovePlayer={leave}
-              onResetCourt={handleResetCourt}
-              onClearQueue={handleClearQueue}
-            />
+            <AdminPanel queue={queue} courts={courts}
+              onRemovePlayer={leave} onResetCourt={handleResetCourt} onClearQueue={handleClearQueue} />
             <div style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #ddd"}}>
               <h3 style={{marginBottom:"14px"}}>Join the Queue</h3>
               {error&&<p style={{color:"red",fontSize:"13px",marginBottom:"8px"}}>{error}</p>}
@@ -340,7 +375,12 @@
                       )}
                     </div>
                     {player.status==="waiting"&&<div style={{fontSize:"13px",color:"#888",marginTop:"4px"}}>⏳ {formatWait((player.position-1)*avg)}</div>}
-                    {player.status==="playing"&&<Timer onEnd={(d)=>endSession(player.id,d)} />}
+                    {player.status==="playing"&&(
+                      <Timer
+                        onEnd={(d)=>endSession(player.id,d)}
+                        onOvertime={()=>addNotification(`⚠️ ${player.name}'s time is up on ${player.court}!`,"error")}
+                      />
+                    )}
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
                     {player.status==="waiting"&&<button style={{background:"#1D9E75"}} onClick={()=>setStatus(player.id,"playing")}>Start Playing</button>}
