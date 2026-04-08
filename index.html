@@ -16,10 +16,12 @@
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .notif { animation: slideIn 0.3s ease; }
     .warning-pulse { animation: pulse 1s infinite; }
     .player-enter { animation: slideUp 0.35s ease; }
     .badge-pop { animation: popIn 0.4s ease; }
+    .modal-overlay { animation: fadeIn 0.2s ease; }
     body.dark { background: #1a1a2e; color: #e0e0e0; }
     body.dark input, body.dark select { background: #2a2a3e; color: #e0e0e0; border-color: #444; }
     body.dark .card { background: #2a2a3e !important; border-color: #444 !important; }
@@ -31,6 +33,7 @@
     body.dark .history-row { border-color: #333 !important; }
     body.dark .queue-empty { color: #666 !important; }
     body.dark .muted { color: #888 !important; }
+    body.dark .modal-box { background: #2a2a3e !important; border-color: #444 !important; }
     body { background: #f4f4f4; }
     .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
     .courts-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
@@ -80,17 +83,42 @@
     function formatTime(date) {
       return new Date(date).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
     }
-
-    // NEW: Calculate estimated availability time for a court
     function getCourtAvailability(courtName, queue, sessionStartTimes, avg) {
-      const playingPlayer = queue.find(p=>p.court===courtName&&p.status==="playing");
+      const playingPlayer=queue.find(p=>p.court===courtName&&p.status==="playing");
       if (!playingPlayer) return null;
-      const startTime = sessionStartTimes[playingPlayer.id];
+      const startTime=sessionStartTimes[playingPlayer.id];
       if (!startTime) return null;
-      const elapsedMins = Math.floor((Date.now()-startTime)/60000);
-      const remainingMins = Math.max(0, avg - elapsedMins);
-      const availableAt = new Date(Date.now() + remainingMins * 60000);
-      return { remainingMins, availableAt: formatTime(availableAt), playerName: playingPlayer.name };
+      const elapsedMins=Math.floor((Date.now()-startTime)/60000);
+      const remainingMins=Math.max(0,avg-elapsedMins);
+      const availableAt=new Date(Date.now()+remainingMins*60000);
+      return { remainingMins, availableAt:formatTime(availableAt), playerName:playingPlayer.name };
+    }
+
+    // NEW: Check-in Confirmation Modal
+    function CheckInModal({ player, onConfirm, onCancel }) {
+      if (!player) return null;
+      return (
+        <div className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+          <div className="modal-box card" style={{background:"white",borderRadius:"16px",padding:"30px",maxWidth:"360px",width:"100%",textAlign:"center",border:"1px solid #ddd"}}>
+            <div style={{fontSize:"48px",marginBottom:"16px"}}>🎾</div>
+            <h2 style={{marginBottom:"8px",fontSize:"20px"}}>Ready to Play?</h2>
+            <p style={{color:"#888",fontSize:"14px",marginBottom:"8px"}}>
+              <strong style={{color:"#333"}}>{player.name}</strong> — {player.court}
+            </p>
+            <p style={{color:"#888",fontSize:"13px",marginBottom:"24px",lineHeight:"1.5"}}>
+              Please confirm you are at the court and ready to start your session. Your timer will begin immediately.
+            </p>
+            <div style={{display:"flex",gap:"12px",justifyContent:"center"}}>
+              <button style={{background:"#eee",color:"#555",padding:"10px 24px",fontSize:"14px"}} onClick={onCancel}>
+                Not Yet
+              </button>
+              <button style={{background:"#1D9E75",padding:"10px 24px",fontSize:"14px",fontWeight:"500"}} onClick={onConfirm}>
+                ✅ I'm Ready!
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
 
     function NotificationBanner({ notifications }) {
@@ -149,31 +177,18 @@
       );
     }
 
-    // UPDATED: Court card now shows estimated availability time
     function CourtCard({ court, queue, sessionStartTimes, avg }) {
       const [tick, setTick] = useState(0);
-      useEffect(()=>{
-        const t = setInterval(()=>setTick(x=>x+1), 30000);
-        return ()=>clearInterval(t);
-      },[]);
-      const avail = getCourtAvailability(court.name, queue, sessionStartTimes, avg);
+      useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),30000); return ()=>clearInterval(t); },[]);
+      const avail=getCourtAvailability(court.name,queue,sessionStartTimes,avg);
       return (
         <div className="card" style={{padding:"14px",borderRadius:"8px",textAlign:"center",background:court.status==="occupied"?"#fff0f0":"#f0fdf8",border:`1px solid ${court.status==="occupied"?"#e74c3c":"#1D9E75"}`,transition:"all 0.3s ease"}}>
           <div style={{fontSize:"22px",marginBottom:"6px"}}>{court.status==="occupied"?"🔴":"🟢"}</div>
           <div style={{fontWeight:"bold",fontSize:"15px"}}>{court.name}</div>
-          <div style={{fontSize:"12px",marginTop:"4px",fontWeight:"500",color:court.status==="occupied"?"#e74c3c":"#1D9E75"}}>
-            {court.status==="occupied"?"Occupied":"Available"}
-          </div>
+          <div style={{fontSize:"12px",marginTop:"4px",fontWeight:"500",color:court.status==="occupied"?"#e74c3c":"#1D9E75"}}>{court.status==="occupied"?"Occupied":"Available"}</div>
           {court.currentPlayer&&<div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{court.currentPlayer}</div>}
-          {avail&&(
-            <div style={{marginTop:"6px",padding:"4px 8px",background:"#fff3cd",borderRadius:"6px",fontSize:"11px",color:"#856404"}}>
-              🕐 Free ~{avail.availableAt}
-              {avail.remainingMins>0&&<span style={{display:"block",color:"#aaa",fontSize:"10px"}}>{avail.remainingMins} min left</span>}
-            </div>
-          )}
-          <div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>
-            {queue.filter(p=>p.court===court.name&&p.status==="waiting").length} waiting
-          </div>
+          {avail&&<div style={{marginTop:"6px",padding:"4px 8px",background:"#fff3cd",borderRadius:"6px",fontSize:"11px",color:"#856404"}}>🕐 Free ~{avail.availableAt}{avail.remainingMins>0&&<span style={{display:"block",color:"#aaa",fontSize:"10px"}}>{avail.remainingMins} min left</span>}</div>}
+          <div className="muted" style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{queue.filter(p=>p.court===court.name&&p.status==="waiting").length} waiting</div>
         </div>
       );
     }
@@ -216,10 +231,8 @@
 
     function PositionBadge({ position, isPlaying }) {
       const [animate, setAnimate] = useState(false);
-      const prevPos = useRef(position);
-      useEffect(()=>{
-        if (prevPos.current!==position) { setAnimate(true); setTimeout(()=>setAnimate(false),400); prevPos.current=position; }
-      },[position]);
+      const prevPos=useRef(position);
+      useEffect(()=>{ if(prevPos.current!==position){ setAnimate(true); setTimeout(()=>setAnimate(false),400); prevPos.current=position; } },[position]);
       return (
         <div className={animate?"badge-pop":""} style={{width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,background:isPlaying?"#1D9E75":"#ddd",color:isPlaying?"white":"#555",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",fontSize:"16px",transition:"background 0.3s ease"}}>{position}</div>
       );
@@ -288,6 +301,7 @@
       const [darkMode, setDarkMode] = useState(false);
       const [newPlayerIds, setNewPlayerIds] = useState(new Set());
       const [sessionStartTimes, setSessionStartTimes] = useState({});
+      const [checkInPlayer, setCheckInPlayer] = useState(null);
       const [courts, setCourts] = useState([
         {id:1,name:"Court 1",status:"available",currentPlayer:null},
         {id:2,name:"Court 2",status:"available",currentPlayer:null},
@@ -327,15 +341,21 @@
         if (newQueue.length>0&&newQueue[0].status==="waiting") { addNotification(`🎾 ${newQueue[0].name} — you are next!`,"warning"); if(soundOn) playAlertSound(); }
       };
 
-      const setStatus=(id,status)=>{
+      // Show check-in modal instead of immediately starting
+      const requestStart=(id)=>{
         const player=queue.find(p=>p.id===id);
-        if (status==="playing"&&player) {
-          setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"occupied",currentPlayer:player.name}:c));
-          setSessionStartTimes(t=>({...t,[id]:Date.now()}));
-          addNotification(`🎾 ${player.name} started playing!`);
-          if(soundOn) playSuccessSound();
-        }
-        setQueue(q=>q.map(p=>p.id===id?{...p,status}:p));
+        if (player) setCheckInPlayer(player);
+      };
+
+      const confirmStart=()=>{
+        if (!checkInPlayer) return;
+        const id=checkInPlayer.id;
+        setCourts(cs=>cs.map(c=>c.name===checkInPlayer.court?{...c,status:"occupied",currentPlayer:checkInPlayer.name}:c));
+        setSessionStartTimes(t=>({...t,[id]:Date.now()}));
+        addNotification(`🎾 ${checkInPlayer.name} checked in and started playing!`);
+        if(soundOn) playSuccessSound();
+        setQueue(q=>q.map(p=>p.id===id?{...p,status:"playing"}:p));
+        setCheckInPlayer(null);
       };
 
       const endSession=(id,duration)=>{
@@ -372,6 +392,7 @@
       return (
         <div style={{minHeight:"100vh"}}>
           <NotificationBanner notifications={notifications} />
+          <CheckInModal player={checkInPlayer} onConfirm={confirmStart} onCancel={()=>setCheckInPlayer(null)} />
           <div style={{background:"#1D9E75",padding:"14px 20px",display:"flex",alignItems:"center",gap:"10px"}}>
             <span style={{fontSize:"22px"}}>🎾</span>
             <span style={{color:"white",fontSize:"20px",fontWeight:"bold"}}>CourtQueue</span>
@@ -384,9 +405,7 @@
           <div style={{maxWidth:"700px",margin:"24px auto",padding:"0 16px"}}>
             <StatsBar queue={queue} history={history} />
             <div className="courts-grid">
-              {courts.map(c=>(
-                <CourtCard key={c.id} court={c} queue={queue} sessionStartTimes={sessionStartTimes} avg={avg} />
-              ))}
+              {courts.map(c=><CourtCard key={c.id} court={c} queue={queue} sessionStartTimes={sessionStartTimes} avg={avg} />)}
             </div>
             <AdminPanel queue={queue} courts={courts} onRemovePlayer={leave} onResetCourt={handleResetCourt} onClearQueue={handleClearQueue} />
             <div className="card" style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #ddd"}}>
@@ -418,7 +437,7 @@
                 <p className="queue-empty" style={{color:"#aaa",textAlign:"center",padding:"30px 0"}}>No players in queue yet. Be the first to join! 🎾</p>
               ):visiblePlayers.map((player,idx)=>(
                 <PlayerRow key={player.id} player={player} idx={idx} avg={avg}
-                  onStart={(id)=>setStatus(id,"playing")} onLeave={leave} onEnd={endSession}
+                  onStart={requestStart} onLeave={leave} onEnd={endSession}
                   onOvertime={(p)=>addNotification(`⚠️ ${p.name}'s time is up!`,"error")}
                   isNew={newPlayerIds.has(player.id)} />
               ))}
