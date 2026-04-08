@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CourtQueue 🎾</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.9/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f4f4f4; min-height: 100vh; }
+    button { cursor: pointer; border: none; border-radius: 6px; padding: 6px 14px; font-size: 13px; color: white; }
+    input, select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const DEFAULT_AVG = 30;
+
+    function formatWait(mins) {
+      if (mins === 0) return "You are next!";
+      if (mins < 60) return `~${mins} min wait`;
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return m === 0 ? `~${h} hr wait` : `~${h} hr ${m} min wait`;
+    }
+
+    function Timer({ onEnd }) {
+      const [secs, setSecs] = useState(0);
+      const [running, setRunning] = useState(false);
+      useEffect(() => {
+        let t = null;
+        if (running) t = setInterval(() => setSecs(s => s + 1), 1000);
+        return () => clearInterval(t);
+      }, [running]);
+      const fmt = (s) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+      return (
+        <div style={{marginTop:"8px",display:"flex",alignItems:"center",gap:"8px"}}>
+          <span style={{fontSize:"22px",fontWeight:"bold",color:running?"#1D9E75":"#333"}}>{fmt(secs)}</span>
+          {!running
+            ? <button style={{background:"#1D9E75"}} onClick={()=>setRunning(true)}>Start</button>
+            : <button style={{background:"#e67e22"}} onClick={()=>setRunning(false)}>Pause</button>
+          }
+          <button style={{background:"#e74c3c"}} onClick={()=>{
+            setRunning(false);
+            onEnd(Math.max(1, Math.round(secs/60)));
+            setSecs(0);
+          }}>End Session</button>
+        </div>
+      );
+    }
+
+    function CourtStatusPanel({ courts }) {
+      return (
+        <div style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #ddd"}}>
+          <h3 style={{marginBottom:"14px"}}>🏟 Court Status</h3>
+          <div style={{display:"flex",gap:"12px",flexWrap:"wrap"}}>
+            {courts.map(court => (
+              <div key={court.id} style={{
+                flex:"1",minWidth:"140px",padding:"14px",borderRadius:"8px",textAlign:"center",
+                background:court.status==="occupied"?"#fff0f0":"#f0fdf8",
+                border:`1px solid ${court.status==="occupied"?"#e74c3c":"#1D9E75"}`
+              }}>
+                <div style={{fontSize:"22px",marginBottom:"6px"}}>{court.status==="occupied"?"🔴":"🟢"}</div>
+                <div style={{fontWeight:"bold",fontSize:"15px"}}>{court.name}</div>
+                <div style={{fontSize:"12px",marginTop:"4px",fontWeight:"500",
+                  color:court.status==="occupied"?"#e74c3c":"#1D9E75"}}>
+                  {court.status==="occupied"?"Occupied":"Available"}
+                </div>
+                {court.currentPlayer&&(
+                  <div style={{fontSize:"12px",color:"#888",marginTop:"4px"}}>{court.currentPlayer}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [queue, setQueue] = useState([]);
+      const [sessions, setSessions] = useState([]);
+      const [name, setName] = useState("");
+      const [court, setCourt] = useState("Court 1");
+      const [error, setError] = useState("");
+      const [courts, setCourts] = useState([
+        {id:1,name:"Court 1",status:"available",currentPlayer:null},
+        {id:2,name:"Court 2",status:"available",currentPlayer:null},
+        {id:3,name:"Court 3",status:"available",currentPlayer:null},
+      ]);
+
+      const avg = sessions.length===0 ? DEFAULT_AVG
+        : Math.round(sessions.slice(-5).reduce((s,x)=>s+x,0)/Math.min(sessions.length,5));
+
+      const join = () => {
+        if (!name.trim()) { setError("Please enter your name"); return; }
+        setQueue(q=>[...q,{id:Date.now(),name:name.trim(),court,position:queue.length+1,status:"waiting"}]);
+        setName(""); setError("");
+      };
+
+      const leave = (id) => {
+        const player = queue.find(p=>p.id===id);
+        if (player?.status==="playing")
+          setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
+        setQueue(q=>q.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1})));
+      };
+
+      const setStatus = (id, status) => {
+        const player = queue.find(p=>p.id===id);
+        if (status==="playing"&&player)
+          setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"occupied",currentPlayer:player.name}:c));
+        setQueue(q=>q.map(p=>p.id===id?{...p,status}:p));
+      };
+
+      const endSession = (id, duration) => {
+        const player = queue.find(p=>p.id===id);
+        if (player) setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
+        setSessions(s=>[...s,duration]);
+        setQueue(q=>q.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1})));
+      };
+
+      return (
+        <div>
+          <div style={{background:"#1D9E75",padding:"14px 30px",display:"flex",alignItems:"center",gap:"10px"}}>
+            <span style={{fontSize:"22px"}}>🎾</span>
+            <span style={{color:"white",fontSize:"20px",fontWeight:"bold"}}>CourtQueue</span>
+            <span style={{color:"#cfffec",fontSize:"13px",marginLeft:"8px"}}>Tennis & Pickleball Queue Manager</span>
+          </div>
+          <div style={{maxWidth:"700px",margin:"30px auto",padding:"0 20px"}}>
+            <CourtStatusPanel courts={courts} />
+            <div style={{background:"white",borderRadius:"10px",padding:"20px",marginBottom:"24px",border:"1px solid #ddd"}}>
+              <h3 style={{marginBottom:"14px"}}>Join the Queue</h3>
+              {error&&<p style={{color:"red",fontSize:"13px",marginBottom:"8px"}}>{error}</p>}
+              <div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>
+                <input type="text" placeholder="Your name" value={name}
+                  onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&join()}
+                  style={{flex:1,minWidth:"150px"}} />
+                <select value={court} onChange={e=>setCourt(e.target.value)}>
+                  <option>Court 1</option><option>Court 2</option><option>Court 3</option>
+                </select>
+                <button style={{background:"#1D9E75"}} onClick={join}>Join Queue</button>
+              </div>
+            </div>
+            <div style={{background:"white",borderRadius:"10px",padding:"20px",border:"1px solid #ddd"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px"}}>
+                <h3>Live Queue</h3>
+                <span style={{fontSize:"13px",color:"#888"}}>Avg game: {avg} min{sessions.length>0&&` · ${sessions.length} completed`}</span>
+              </div>
+              {queue.length===0?(
+                <p style={{color:"#aaa",textAlign:"center",padding:"30px 0"}}>No players in queue yet. Be the first to join! 🎾</p>
+              ):queue.map(player=>(
+                <div key={player.id} style={{
+                  display:"flex",alignItems:"flex-start",gap:"14px",padding:"14px",marginBottom:"10px",borderRadius:"8px",
+                  background:player.status==="playing"?"#f0fdf8":"#fafafa",
+                  border:`1px solid ${player.status==="playing"?"#1D9E75":"#eee"}`
+                }}>
+                  <div style={{width:"36px",height:"36px",borderRadius:"50%",flexShrink:0,
+                    background:player.status==="playing"?"#1D9E75":"#ddd",
+                    color:player.status==="playing"?"white":"#555",
+                    display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",fontSize:"16px"
+                  }}>{player.position}</div>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
+                      <strong>{player.name}</strong>
+                      <span style={{fontSize:"13px",color:"#888"}}>{player.court}</span>
+                      <span style={{fontSize:"12px",padding:"2px 8px",borderRadius:"20px",
+                        background:player.status==="playing"?"#1D9E75":"#eee",
+                        color:player.status==="playing"?"white":"#555"
+                      }}>{player.status==="playing"?"Playing":"Waiting"}</span>
+                    </div>
+                    {player.status==="waiting"&&<div style={{fontSize:"13px",color:"#888",marginTop:"4px"}}>⏳ {formatWait((player.position-1)*avg)}</div>}
+                    {player.status==="playing"&&<Timer onEnd={(d)=>endSession(player.id,d)} />}
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+                    {player.status==="waiting"&&<button style={{background:"#1D9E75"}} onClick={()=>setStatus(player.id,"playing")}>Start Playing</button>}
+                    <button style={{background:"#e74c3c"}} onClick={()=>leave(player.id)}>Leave</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
