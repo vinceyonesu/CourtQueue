@@ -1,0 +1,106 @@
+// Helper function to simulate joining a queue
+function joinQueue(queue, playerName, court) {
+  const player = {
+    id: Date.now(),
+    name: playerName,
+    court: court,
+    position: queue.length + 1,
+    status: 'waiting',
+    joinedAt: new Date(),
+  };
+  return [...queue, player];
+}
+
+// Helper function to simulate leaving a queue
+function leaveQueue(queue, playerId) {
+  const updated = queue.filter(player => player.id !== playerId);
+  return updated.map((player, index) => ({
+    ...player,
+    position: index + 1,
+  }));
+}
+
+// Helper function to update player status
+function updateStatus(queue, playerId, status) {
+  return queue.map(player =>
+    player.id === playerId ? { ...player, status } : player
+  );
+}
+
+// --- joinQueue tests ---
+
+test('adds a player to an empty queue', () => {
+  const queue = [];
+  const updated = joinQueue(queue, 'Alice', 'Court 1');
+  expect(updated.length).toBe(1);
+  expect(updated[0].name).toBe('Alice');
+  expect(updated[0].position).toBe(1);
+});
+
+test('adds multiple players with correct positions', () => {
+  let queue = [];
+  queue = joinQueue(queue, 'Alice', 'Court 1');
+  queue = joinQueue(queue, 'Bob', 'Court 2');
+  queue = joinQueue(queue, 'Charlie', 'Court 1');
+  expect(queue.length).toBe(3);
+  expect(queue[0].position).toBe(1);
+  expect(queue[1].position).toBe(2);
+  expect(queue[2].position).toBe(3);
+});
+
+test('new player gets waiting status by default', () => {
+  const queue = [];
+  const updated = joinQueue(queue, 'Alice', 'Court 1');
+  expect(updated[0].status).toBe('waiting');
+});
+
+// --- leaveQueue tests ---
+
+test('removes a player from the queue', () => {
+  let queue = [];
+  queue = joinQueue(queue, 'Alice', 'Court 1');
+  queue = joinQueue(queue, 'Bob', 'Court 2');
+  const aliceId = queue[0].id;
+  queue = leaveQueue(queue, aliceId);
+  expect(queue.length).toBe(1);
+  expect(queue[0].name).toBe('Bob');
+});
+
+test('recalculates positions after a player leaves', () => {
+  let queue = [];
+  queue = joinQueue(queue, 'Alice', 'Court 1');
+  queue = joinQueue(queue, 'Bob', 'Court 2');
+  queue = joinQueue(queue, 'Charlie', 'Court 1');
+  const aliceId = queue[0].id;
+  queue = leaveQueue(queue, aliceId);
+  expect(queue[0].position).toBe(1);
+  expect(queue[1].position).toBe(2);
+});
+
+test('returns empty queue when last player leaves', () => {
+  let queue = [];
+  queue = joinQueue(queue, 'Alice', 'Court 1');
+  const aliceId = queue[0].id;
+  queue = leaveQueue(queue, aliceId);
+  expect(queue.length).toBe(0);
+});
+
+// --- updateStatus tests ---
+
+test('updates a player status to playing', () => {
+  let queue = [];
+  queue = joinQueue(queue, 'Alice', 'Court 1');
+  const aliceId = queue[0].id;
+  queue = updateStatus(queue, aliceId, 'playing');
+  expect(queue[0].status).toBe('playing');
+});
+
+test('only updates the correct player status', () => {
+  let queue = [];
+  queue = joinQueue(queue, 'Alice', 'Court 1');
+  queue = joinQueue(queue, 'Bob', 'Court 2');
+  const aliceId = queue[0].id;
+  queue = updateStatus(queue, aliceId, 'playing');
+  expect(queue[0].status).toBe('playing');
+  expect(queue[1].status).toBe('waiting');
+});
