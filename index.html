@@ -16,10 +16,6 @@
       from { transform: translateX(120%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
-    @keyframes slideOut {
-      from { transform: translateX(0); opacity: 1; }
-      to { transform: translateX(120%); opacity: 0; }
-    }
     .notif { animation: slideIn 0.3s ease; }
   </style>
 </head>
@@ -37,19 +33,21 @@
       return m === 0 ? `~${h} hr wait` : `~${h} hr ${m} min wait`;
     }
 
+    function formatTime(date) {
+      return new Date(date).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+    }
+
     function NotificationBanner({ notifications }) {
       if (notifications.length === 0) return null;
       return (
         <div style={{position:"fixed",top:"20px",right:"20px",zIndex:999,display:"flex",flexDirection:"column",gap:"8px"}}>
           {notifications.map(n => (
             <div key={n.id} className="notif" style={{
-              background: n.type==="success" ? "#1D9E75" : "#e67e22",
+              background:n.type==="success"?"#1D9E75":"#e67e22",
               color:"white",padding:"12px 18px",borderRadius:"8px",
               fontSize:"14px",fontWeight:"500",boxShadow:"0 4px 12px rgba(0,0,0,0.15)",
               maxWidth:"280px"
-            }}>
-              {n.message}
-            </div>
+            }}>{n.message}</div>
           ))}
         </div>
       );
@@ -107,9 +105,45 @@
       );
     }
 
+    function HistoryLog({ history }) {
+      if (history.length === 0) return null;
+      return (
+        <div style={{background:"white",borderRadius:"10px",padding:"20px",marginTop:"24px",border:"1px solid #ddd"}}>
+          <h3 style={{marginBottom:"14px"}}>📋 Session History</h3>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:"13px"}}>
+            <thead>
+              <tr style={{borderBottom:"2px solid #eee"}}>
+                <th style={{textAlign:"left",padding:"8px",color:"#888",fontWeight:"500"}}>#</th>
+                <th style={{textAlign:"left",padding:"8px",color:"#888",fontWeight:"500"}}>Player</th>
+                <th style={{textAlign:"left",padding:"8px",color:"#888",fontWeight:"500"}}>Court</th>
+                <th style={{textAlign:"left",padding:"8px",color:"#888",fontWeight:"500"}}>Duration</th>
+                <th style={{textAlign:"left",padding:"8px",color:"#888",fontWeight:"500"}}>Ended</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...history].reverse().map((h,i) => (
+                <tr key={h.id} style={{borderBottom:"1px solid #f0f0f0"}}>
+                  <td style={{padding:"8px",color:"#aaa"}}>{history.length - i}</td>
+                  <td style={{padding:"8px",fontWeight:"500"}}>{h.playerName}</td>
+                  <td style={{padding:"8px",color:"#888"}}>{h.court}</td>
+                  <td style={{padding:"8px"}}>
+                    <span style={{background:"#f0fdf8",color:"#1D9E75",padding:"2px 8px",borderRadius:"20px",fontWeight:"500"}}>
+                      {h.duration} min
+                    </span>
+                  </td>
+                  <td style={{padding:"8px",color:"#aaa"}}>{formatTime(h.endedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
     function App() {
       const [queue, setQueue] = useState([]);
       const [sessions, setSessions] = useState([]);
+      const [history, setHistory] = useState([]);
       const [name, setName] = useState("");
       const [court, setCourt] = useState("Court 1");
       const [error, setError] = useState("");
@@ -143,10 +177,8 @@
           setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
         const newQueue = queue.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1}));
         setQueue(newQueue);
-        // Notify new first player they are next
-        if (newQueue.length > 0 && newQueue[0].status === "waiting") {
-          addNotification(`🎾 ${newQueue[0].name} — you are next!`, "warning");
-        }
+        if (newQueue.length>0&&newQueue[0].status==="waiting")
+          addNotification(`🎾 ${newQueue[0].name} — you are next!`,"warning");
       };
 
       const setStatus = (id, status) => {
@@ -163,13 +195,19 @@
         if (player) {
           setCourts(cs=>cs.map(c=>c.name===player.court?{...c,status:"available",currentPlayer:null}:c));
           addNotification(`✅ ${player.name} finished — session was ${duration} min`);
+          setHistory(h=>[...h,{
+            id:Date.now(),
+            playerName:player.name,
+            court:player.court,
+            duration,
+            endedAt:new Date()
+          }]);
         }
         setSessions(s=>[...s,duration]);
         const newQueue = queue.filter(p=>p.id!==id).map((p,i)=>({...p,position:i+1}));
         setQueue(newQueue);
-        if (newQueue.length > 0 && newQueue[0].status === "waiting") {
-          setTimeout(()=>addNotification(`🎾 ${newQueue[0].name} — you are next!`, "warning"), 500);
-        }
+        if (newQueue.length>0&&newQueue[0].status==="waiting")
+          setTimeout(()=>addNotification(`🎾 ${newQueue[0].name} — you are next!`,"warning"),500);
       };
 
       return (
@@ -237,6 +275,7 @@
                 </div>
               ))}
             </div>
+            <HistoryLog history={history} />
           </div>
         </div>
       );
